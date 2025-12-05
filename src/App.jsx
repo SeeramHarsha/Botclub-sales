@@ -17,7 +17,9 @@ import {
   History,
   Save,
   Clock,
-  Eye
+  Eye,
+  Menu,
+  X
 } from 'lucide-react';
 
 // --- Default Data for BotClub ---
@@ -110,6 +112,7 @@ export default function App() {
 
   // Settings State (Hoisted)
   const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Hardware', description: '' });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Load quotes from local storage on mount
   useEffect(() => {
@@ -232,57 +235,79 @@ export default function App() {
   // --- VIEWS ---
 
   const renderSidebar = () => (
-    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full flex-shrink-0">
-      <div className="p-6 border-b border-slate-800">
-        <div className="flex items-center gap-2 text-white font-bold text-xl">
-          <Briefcase className="w-6 h-6 text-blue-500" />
-          <span>BotClub</span>
-        </div>
-        <p className="text-xs text-slate-500 mt-1">Sales Configurator</p>
-      </div>
+    <>
+      {/* Mobile Overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-      <nav className="flex-1 p-4 space-y-2">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
-        >
-          <Calculator className="w-5 h-5" />
-          <span>Quote Builder</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('preview')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
-        >
-          <FileText className="w-5 h-5" />
-          <span>Preview Quote</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('history')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
-        >
-          <History className="w-5 h-5" />
-          <span>Quotations</span>
-        </button>
-
-        <div className="pt-4 mt-4 border-t border-slate-800">
-          <p className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Admin</p>
+      {/* Sidebar */}
+      <div className={`
+        fixed md:static inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-300 flex flex-col h-full flex-shrink-0 transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+        <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-2 text-white font-bold text-xl">
+              <Briefcase className="w-6 h-6 text-blue-500" />
+              <span>BotClub</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Sales Configurator</p>
+          </div>
           <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden text-slate-400 hover:text-white"
           >
-            <Settings className="w-5 h-5" />
-            <span>Catalog Config</span>
+            <X className="w-6 h-6" />
           </button>
         </div>
-      </nav>
-    </div>
+
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+          <button
+            onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+          >
+            <Calculator className="w-5 h-5" />
+            <span>Quote Builder</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('preview'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+          >
+            <FileText className="w-5 h-5" />
+            <span>Preview Quote</span>
+          </button>
+
+          <button
+            onClick={() => { setActiveTab('history'); setIsMobileMenuOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+          >
+            <History className="w-5 h-5" />
+            <span>Quotations</span>
+          </button>
+
+          <div className="pt-4 mt-4 border-t border-slate-800">
+            <p className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Admin</p>
+            <button
+              onClick={() => { setActiveTab('settings'); setIsMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+            >
+              <Settings className="w-5 h-5" />
+              <span>Catalog Config</span>
+            </button>
+          </div>
+        </nav>
+      </div>
+    </>
   );
 
   const renderQuoteBuilder = () => (
-    <div className="flex gap-6 items-start">
-      <div className="flex-1 flex flex-col gap-6 min-w-0">
+    <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div className="flex-1 flex flex-col gap-6 min-w-0 w-full">
 
         <Card className="p-6">
           <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
@@ -436,8 +461,8 @@ export default function App() {
         </Card>
       </div>
 
-      <div className="w-80 flex-shrink-0">
-        <div className="sticky top-6 space-y-4">
+      <div className="w-full lg:w-80 flex-shrink-0">
+        <div className="lg:sticky lg:top-6 space-y-4">
           <Card className="p-6 bg-slate-900 text-white border-slate-800">
             <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-green-400" />
@@ -874,12 +899,30 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
       {renderSidebar()}
-      <main className="flex-1 overflow-auto p-6">
-        {activeTab === 'dashboard' && renderQuoteBuilder()}
-        {activeTab === 'preview' && renderPrintPreview()}
-        {activeTab === 'settings' && renderSettingsView()}
-        {activeTab === 'history' && renderQuotationsHistory()}
-      </main>
+
+      <div className="flex-1 flex flex-col h-full overflow-hidden">
+        {/* Mobile Header */}
+        <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between md:hidden flex-shrink-0">
+          <div className="flex items-center gap-2 font-bold text-slate-800">
+            <Briefcase className="w-6 h-6 text-blue-600" />
+            <span>BotClub</span>
+          </div>
+          <button
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+        </header>
+
+        <main className="flex-1 overflow-auto p-4 md:p-6">
+          {activeTab === 'dashboard' && renderQuoteBuilder()}
+          {activeTab === 'preview' && renderPrintPreview()}
+          {activeTab === 'settings' && renderSettingsView()}
+          {activeTab === 'history' && renderQuotationsHistory()}
+        </main>
+      </div>
+
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
