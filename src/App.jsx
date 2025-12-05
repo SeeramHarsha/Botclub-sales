@@ -1,0 +1,886 @@
+import React, { useState, useEffect } from 'react';
+import {
+  Calculator,
+  Settings,
+  Plus,
+  Trash2,
+  FileText,
+  Printer,
+  DollarSign,
+  Users,
+  Package,
+  ArrowLeft,
+  Briefcase,
+  Lock,
+  AlertCircle,
+  Check,
+  History,
+  Save,
+  Clock,
+  Eye
+} from 'lucide-react';
+
+// --- Default Data for BotClub ---
+const INITIAL_CATALOG = [
+  { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.' },
+  { id: 2, name: 'Classroom presentation application', category: 'Software', price: 3000.00, description: 'Interactive software for classroom smart boards. (Monthly License)' },
+  { id: 3, name: 'Teacher pro dashboard', category: 'Software', price: 1500.00, description: 'Advanced analytics and class management tools for teachers. (Monthly License)' },
+  { id: 4, name: 'Principal pro dashboard', category: 'Software', price: 500.00, description: 'High-level oversight and reporting module for school administration. (Monthly License)' },
+  { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.' },
+  { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.' },
+  { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.' },
+  { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.' },
+];
+
+// --- Dependency Rules ---
+const DEPENDENCIES = {
+  3: { requiredId: 2, name: 'Classroom presentation application' },
+  6: { requiredId: 2, name: 'Classroom presentation application' },
+  7: { requiredId: 2, name: 'Classroom presentation application' },
+  8: { requiredId: 1, name: 'Physical models (x32 models)' },
+};
+
+const INITIAL_COMPANY_INFO = {
+  name: "BotClub Private Limited",
+  address: "Wing-3, APIS, ITSEZ, Hill no-3, Rushikonda, Visakhapatnam, A.P - 530045",
+  email: "contact@botclub.in",
+  phone: "+91 8919292103",
+  gstin: "37AAGCB8306B1ZZ"
+};
+
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
+    {children}
+  </div>
+);
+
+const Button = ({ children, onClick, variant = "primary", className = "", icon: Icon, disabled = false }) => {
+  const baseStyle = "flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-50 disabled:cursor-not-allowed";
+  const variants = {
+    primary: "bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500",
+    secondary: "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-400",
+    danger: "bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 focus:ring-red-500",
+    ghost: "bg-transparent hover:bg-slate-100 text-slate-600",
+    success: "bg-emerald-600 hover:bg-emerald-700 text-white focus:ring-emerald-500"
+  };
+
+  return (
+    <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${variants[variant]} ${className}`}>
+      {Icon && <Icon className="w-4 h-4 mr-2" />}
+      {children}
+    </button>
+  );
+};
+
+const Toast = ({ message, onClose, type = 'error' }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const bgColors = {
+    error: 'bg-red-600',
+    success: 'bg-emerald-600'
+  };
+
+  return (
+    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50`}>
+      {type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
+      <span className="text-sm font-medium">{message}</span>
+    </div>
+  );
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [catalog, setCatalog] = useState(INITIAL_CATALOG);
+  const [companyInfo, setCompanyInfo] = useState(INITIAL_COMPANY_INFO);
+  const [toast, setToast] = useState(null);
+  const [savedQuotes, setSavedQuotes] = useState([]);
+
+  // Current Quote State
+  const [customerName, setCustomerName] = useState('Sri Chaitanya School');
+  const [customerContact, setCustomerContact] = useState('Mr. Srinivas (Admin)');
+  const [customerPhone, setCustomerPhone] = useState('+91 98765 43210');
+  const [customerEmail, setCustomerEmail] = useState('admin@srichaitanya.edu');
+  const [quoteItems, setQuoteItems] = useState([]);
+  const [globalDiscount, setGlobalDiscount] = useState(0);
+  const [taxRate, setTaxRate] = useState(18);
+  const [notes, setNotes] = useState('Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.');
+
+  // Settings State (Hoisted)
+  const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Hardware', description: '' });
+
+  // Load quotes from local storage on mount
+  useEffect(() => {
+    const loadedQuotes = localStorage.getItem('botclub_saved_quotes');
+    if (loadedQuotes) {
+      try {
+        setSavedQuotes(JSON.parse(loadedQuotes));
+      } catch (e) {
+        console.error("Failed to parse saved quotes", e);
+      }
+    }
+  }, []);
+
+  const formatMoney = (amount) => {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+  };
+
+  const isLocked = (productId) => {
+    const rule = DEPENDENCIES[productId];
+    if (!rule) return false;
+    return !quoteItems.some(item => item.id === rule.requiredId);
+  };
+
+  const addToQuote = (product) => {
+    if (isLocked(product.id)) {
+      const rule = DEPENDENCIES[product.id];
+      setToast({ message: `Cannot add yet! Requires "${rule.name}" to be added first.`, type: 'error' });
+      return;
+    }
+
+    const existingItemIndex = quoteItems.findIndex(item => item.id === product.id);
+    if (existingItemIndex > -1) {
+      const newItems = [...quoteItems];
+      newItems[existingItemIndex].quantity += 1;
+      setQuoteItems(newItems);
+    } else {
+      const newItem = {
+        ...product,
+        uid: Date.now(),
+        quantity: 1,
+        discount: 0
+      };
+      setQuoteItems([...quoteItems, newItem]);
+    }
+  };
+
+  const updateItem = (uid, field, value) => {
+    setQuoteItems(items => items.map(item =>
+      item.uid === uid ? { ...item, [field]: parseFloat(value) || 0 } : item
+    ));
+  };
+
+  const removeItem = (uid) => {
+    setQuoteItems(items => items.filter(item => item.uid !== uid));
+  };
+
+  const calculateTotals = (items = quoteItems, gDisc = globalDiscount, tax = taxRate) => {
+    const subtotal = items.reduce((acc, item) => {
+      const itemTotal = item.price * item.quantity;
+      const itemDiscounted = itemTotal * (1 - (item.discount / 100));
+      return acc + itemDiscounted;
+    }, 0);
+
+    const discountAmount = subtotal * (gDisc / 100);
+    const afterGlobalDiscount = subtotal - discountAmount;
+    const taxAmount = afterGlobalDiscount * (tax / 100);
+    const total = afterGlobalDiscount + taxAmount;
+
+    return { subtotal, discountAmount, taxAmount, total };
+  };
+
+  const totals = calculateTotals();
+
+  const handleSaveQuote = () => {
+    if (quoteItems.length === 0) {
+      setToast({ message: "Cannot save an empty quote.", type: 'error' });
+      return;
+    }
+
+    const newQuote = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      customerName,
+      customerContact,
+      customerPhone,
+      customerEmail,
+      items: quoteItems,
+      globalDiscount,
+      taxRate,
+      notes,
+      totals
+    };
+
+    const updatedQuotes = [newQuote, ...savedQuotes];
+    setSavedQuotes(updatedQuotes);
+    localStorage.setItem('botclub_saved_quotes', JSON.stringify(updatedQuotes));
+    setToast({ message: "Quote saved successfully!", type: 'success' });
+  };
+
+  const handleDeleteQuote = (id) => {
+    const updatedQuotes = savedQuotes.filter(q => q.id !== id);
+    setSavedQuotes(updatedQuotes);
+    localStorage.setItem('botclub_saved_quotes', JSON.stringify(updatedQuotes));
+    setToast({ message: "Quote deleted.", type: 'success' });
+  };
+
+  const handleLoadQuote = (quote) => {
+    setCustomerName(quote.customerName);
+    setCustomerContact(quote.customerContact);
+    setCustomerPhone(quote.customerPhone);
+    setCustomerEmail(quote.customerEmail);
+    setQuoteItems(quote.items);
+    setGlobalDiscount(quote.globalDiscount);
+    setTaxRate(quote.taxRate);
+    setNotes(quote.notes);
+    setActiveTab('preview');
+    setToast({ message: "Quote loaded from history.", type: 'success' });
+  };
+
+  // --- VIEWS ---
+
+  const renderSidebar = () => (
+    <div className="w-64 bg-slate-900 text-slate-300 flex flex-col h-full flex-shrink-0">
+      <div className="p-6 border-b border-slate-800">
+        <div className="flex items-center gap-2 text-white font-bold text-xl">
+          <Briefcase className="w-6 h-6 text-blue-500" />
+          <span>BotClub</span>
+        </div>
+        <p className="text-xs text-slate-500 mt-1">Sales Configurator</p>
+      </div>
+
+      <nav className="flex-1 p-4 space-y-2">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+        >
+          <Calculator className="w-5 h-5" />
+          <span>Quote Builder</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('preview')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+        >
+          <FileText className="w-5 h-5" />
+          <span>Preview Quote</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+        >
+          <History className="w-5 h-5" />
+          <span>Quotations</span>
+        </button>
+
+        <div className="pt-4 mt-4 border-t border-slate-800">
+          <p className="px-4 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Admin</p>
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
+          >
+            <Settings className="w-5 h-5" />
+            <span>Catalog Config</span>
+          </button>
+        </div>
+      </nav>
+    </div>
+  );
+
+  const renderQuoteBuilder = () => (
+    <div className="flex gap-6 items-start">
+      <div className="flex-1 flex flex-col gap-6 min-w-0">
+
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-6 flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600" />
+            Client Details
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">School Name</label>
+              <input
+                type="text"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">Contact Person</label>
+              <input
+                type="text"
+                value={customerContact}
+                onChange={(e) => setCustomerContact(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">Phone Number</label>
+              <input
+                type="text"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-600 mb-2">Email ID</label>
+              <input
+                type="text"
+                value={customerEmail}
+                onChange={(e) => setCustomerEmail(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <Package className="w-5 h-5 text-blue-600" />
+            Available Products
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {catalog.map(product => {
+              const locked = isLocked(product.id);
+              const selectedQty = quoteItems.filter(item => item.id === product.id).reduce((acc, curr) => acc + curr.quantity, 0);
+              const isSelected = selectedQty > 0;
+
+              return (
+                <button
+                  key={product.id}
+                  onClick={() => addToQuote(product)}
+                  className={`flex flex-col items-start p-3 rounded-lg border transition-all text-left group h-full relative overflow-hidden
+                    ${locked
+                      ? 'bg-slate-50 border-slate-200 opacity-70 cursor-not-allowed'
+                      : isSelected
+                        ? 'border-blue-500 bg-blue-50/50 ring-1 ring-blue-500'
+                        : 'border-slate-200 hover:border-blue-500 hover:bg-blue-50 bg-white'
+                    }`}
+                >
+                  {/* Status Badge Top Right */}
+                  <div className="absolute top-2 right-2 flex gap-1">
+                    {locked && <Lock className="w-4 h-4 text-slate-400" />}
+                    {isSelected && (
+                      <div className="flex items-center gap-1 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full font-bold shadow-sm">
+                        <span>{selectedQty}</span>
+                        <Check className="w-3 h-3" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className={`font-medium ${locked ? 'text-slate-500' : 'text-slate-800 group-hover:text-blue-700'}`}>
+                    {product.name}
+                  </div>
+                  <div className="text-xs text-slate-400 mt-1 line-clamp-2 min-h-[2.5em]">{product.description}</div>
+                  <div className="text-sm text-slate-500 flex justify-between w-full mt-2 pt-2 border-t border-slate-100">
+                    <span className="bg-slate-100 px-2 py-0.5 rounded text-xs">{product.category}</span>
+                    <span className="font-bold text-slate-700">{formatMoney(product.price)}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+
+        <Card className="p-6 flex-1">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <Calculator className="w-5 h-5 text-blue-600" />
+            Line Items
+          </h2>
+          {quoteItems.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 bg-slate-50 rounded-lg border border-dashed border-slate-300">
+              <p>No items added yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">
+                <div className="col-span-5">Item</div>
+                <div className="col-span-2 text-center">Qty</div>
+                <div className="col-span-2 text-right">Price</div>
+                <div className="col-span-2 text-right">Disc %</div>
+                <div className="col-span-1"></div>
+              </div>
+
+              {quoteItems.map((item) => (
+                <div key={item.uid} className="grid grid-cols-12 gap-4 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="col-span-5">
+                    <div className="font-medium text-slate-800">{item.name}</div>
+                    <div className="text-xs text-slate-500">{item.description}</div>
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)}
+                      className="w-full text-center border border-slate-300 rounded px-2 py-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="col-span-2 text-right text-sm font-medium text-slate-700">
+                    {formatMoney(item.price)}
+                  </div>
+                  <div className="col-span-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={item.discount}
+                      onChange={(e) => updateItem(item.uid, 'discount', e.target.value)}
+                      className="w-full text-right border border-slate-300 rounded px-2 py-1 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    <button onClick={() => removeItem(item.uid)} className="text-slate-400 hover:text-red-500">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <div className="w-80 flex-shrink-0">
+        <div className="sticky top-6 space-y-4">
+          <Card className="p-6 bg-slate-900 text-white border-slate-800">
+            <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-green-400" />
+              Quote Summary
+            </h3>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between text-slate-400">
+                <span>Subtotal</span>
+                <span>{formatMoney(totals.subtotal)}</span>
+              </div>
+
+              <div className="flex justify-between items-center text-slate-400">
+                <span>Global Discount</span>
+                <div className="flex items-center w-20">
+                  <input
+                    type="number"
+                    value={globalDiscount}
+                    onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
+                  />
+                  <span className="ml-1">%</span>
+                </div>
+              </div>
+
+              {totals.discountAmount > 0 && (
+                <div className="flex justify-between text-green-400">
+                  <span>Discount Applied</span>
+                  <span>-{formatMoney(totals.discountAmount)}</span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-slate-400 pt-2 border-t border-slate-800">
+                <span>GST Rate (%)</span>
+                <input
+                  type="number"
+                  value={taxRate}
+                  onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                  className="w-16 bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="flex justify-between text-slate-400">
+                <span>GST Amount</span>
+                <span>{formatMoney(totals.taxAmount)}</span>
+              </div>
+
+              <div className="flex justify-between text-xl font-bold pt-4 border-t border-slate-700 mt-2">
+                <span>Total</span>
+                <span>{formatMoney(totals.total)}</span>
+              </div>
+            </div>
+
+            <div className="mt-8 space-y-3">
+              <Button onClick={handleSaveQuote} variant="secondary" className="w-full" icon={Save}>
+                Save Quote
+              </Button>
+              <Button variant="success" className="w-full" icon={FileText} onClick={() => setActiveTab('preview')}>
+                Preview Quote
+              </Button>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPrintPreview = () => (
+    <div className="max-w-4xl mx-auto h-full flex flex-col">
+      <div className="flex justify-between items-center mb-6">
+        <Button variant="secondary" icon={ArrowLeft} onClick={() => setActiveTab('dashboard')}>
+          Back to Editor
+        </Button>
+        <div className="flex gap-3">
+          <Button variant="secondary" icon={Save} onClick={handleSaveQuote}>
+            Save to History
+          </Button>
+          <Button variant="primary" icon={Printer} onClick={() => window.print()}>
+            Print / Save PDF
+          </Button>
+        </div>
+      </div>
+
+      <div className="bg-white shadow-lg p-12 min-h-[1000px] print:shadow-none print:p-0">
+        <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
+          <div>
+            <div className="text-3xl font-bold text-blue-800">BotClub</div>
+            <p className="text-slate-500 text-sm mt-1">Teaching & Learning Solutions</p>
+          </div>
+          <div className="text-right text-sm text-slate-600 max-w-[300px]">
+            <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
+            <div className="whitespace-pre-wrap">{companyInfo.address}</div>
+            <div className="mt-2">
+              <div>{companyInfo.email}</div>
+              <div>{companyInfo.phone}</div>
+              <div className="font-medium text-slate-800 mt-1">GSTIN: {companyInfo.gstin}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between mb-12">
+          <div className="w-1/2">
+            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Quote For</h3>
+            <div className="text-slate-800 font-semibold text-lg">{customerName}</div>
+            <div className="text-slate-600 mb-1">{customerContact}</div>
+            {customerEmail && <div className="text-slate-500 text-sm">{customerEmail}</div>}
+            {customerPhone && <div className="text-slate-500 text-sm">{customerPhone}</div>}
+          </div>
+          <div className="w-1/2 text-right">
+            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Quote Details</h3>
+            <div className="flex justify-end gap-8">
+              <div>
+                <span className="block text-xs text-slate-500">Date</span>
+                <span className="font-medium">{new Date().toLocaleDateString('en-IN')}</span>
+              </div>
+              <div>
+                <span className="block text-xs text-slate-500">Valid Until</span>
+                <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN')}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <table className="w-full mb-8">
+          <thead>
+            <tr className="border-b-2 border-slate-800">
+              <th className="text-left py-3 font-bold text-slate-800 w-1/2">Description</th>
+              <th className="text-center py-3 font-bold text-slate-800">Qty</th>
+              <th className="text-right py-3 font-bold text-slate-800">Unit Price</th>
+              <th className="text-right py-3 font-bold text-slate-800">Total</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {quoteItems.map((item) => (
+              <tr key={item.uid} className="border-b border-slate-100">
+                <td className="py-4 text-slate-700">
+                  <div className="font-medium text-base">{item.name}</div>
+                  {item.description && <div className="text-xs text-slate-500 mt-1">{item.description}</div>}
+                  <div className="text-xs text-slate-400 mt-0.5 inline-block bg-slate-50 px-1 rounded">{item.category}</div>
+                </td>
+                <td className="py-4 text-center text-slate-700 align-top pt-5">{item.quantity}</td>
+                <td className="py-4 text-right text-slate-700 align-top pt-5">
+                  {item.discount > 0 ? (
+                    <div>
+                      <span className="line-through text-slate-400 text-xs mr-2">{formatMoney(item.price)}</span>
+                      <span>{formatMoney(item.price * (1 - item.discount / 100))}</span>
+                    </div>
+                  ) : (
+                    formatMoney(item.price)
+                  )}
+                </td>
+                <td className="py-4 text-right font-medium text-slate-800 align-top pt-5">
+                  {formatMoney(item.quantity * item.price * (1 - item.discount / 100))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className="flex flex-col items-end gap-2 text-sm text-slate-600 border-t border-slate-100 pt-8">
+          <div className="flex justify-between w-64">
+            <span>Subtotal:</span>
+            <span className="font-medium">{formatMoney(totals.subtotal)}</span>
+          </div>
+          {globalDiscount > 0 && (
+            <div className="flex justify-between w-64 text-green-600">
+              <span>Discount ({globalDiscount}%):</span>
+              <span>-{formatMoney(totals.discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between w-64">
+            <span>GST ({taxRate}%):</span>
+            <span className="font-medium">{formatMoney(totals.taxAmount)}</span>
+          </div>
+          <div className="flex justify-between w-64 text-xl font-bold text-slate-900 border-t-2 border-slate-800 pt-4 mt-2">
+            <span>Total:</span>
+            <span>{formatMoney(totals.total)}</span>
+          </div>
+          <div className="w-64 text-right text-xs text-slate-500 mt-1">
+            * Includes monthly subscription items
+          </div>
+        </div>
+
+        <div className="mt-12">
+          <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-600" />
+            Subscription Terms
+          </h4>
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed">
+            <strong>Notice:</strong> The pricing for software products listed in this quotation (such as Classroom Presentation Application and Pro Dashboards) reflects <strong>monthly subscription costs</strong>.
+            By accepting this quote, the client agrees to a minimum <strong>24-month renewal commitment</strong> for all subscription-based services.
+          </div>
+        </div>
+
+        <div className="mt-8 pt-8 border-t border-slate-100">
+          <h4 className="font-bold text-slate-800 text-sm mb-2">Terms & Notes</h4>
+          <textarea
+            className="w-full text-sm text-slate-600 border-none resize-none focus:ring-0 bg-transparent h-24"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderQuotationsHistory = () => (
+    <div className="max-w-5xl mx-auto">
+      <div className="flex items-center gap-4 mb-8">
+        <Button variant="secondary" icon={ArrowLeft} onClick={() => setActiveTab('dashboard')}>
+          Back to Editor
+        </Button>
+        <h1 className="text-2xl font-bold text-slate-800">Saved Quotations</h1>
+      </div>
+
+      <Card>
+        {savedQuotes.length === 0 ? (
+          <div className="text-center py-16 text-slate-400">
+            <History className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <p className="text-lg font-medium text-slate-600">No quotations saved yet</p>
+            <p className="text-sm">Create a quote in the dashboard and click "Save Quote" to see it here.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50 text-slate-500 uppercase font-bold text-xs">
+                <tr>
+                  <th className="px-6 py-4">Date</th>
+                  <th className="px-6 py-4">School Name</th>
+                  <th className="px-6 py-4 text-center">Items</th>
+                  <th className="px-6 py-4 text-right">Total Amount</th>
+                  <th className="px-6 py-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {savedQuotes.map((quote) => (
+                  <tr key={quote.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 text-slate-600">
+                      {new Date(quote.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-slate-800">
+                      {quote.customerName}
+                      <div className="text-xs text-slate-400 font-normal">{quote.customerContact}</div>
+                    </td>
+                    <td className="px-6 py-4 text-center text-slate-500">
+                      {quote.items.reduce((acc, i) => acc + i.quantity, 0)}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono font-medium text-slate-700">
+                      {formatMoney(quote.totals.total)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleLoadQuote(quote)}
+                          title="View & Print"
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteQuote(quote.id)}
+                          title="Delete"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+
+  const renderSettingsView = () => {
+    // Removed local state, now using hoisted state from App
+
+    const handleAddItem = () => {
+      if (!newItem.name || !newItem.price) return;
+      const product = {
+        id: Date.now(),
+        name: newItem.name,
+        price: parseFloat(newItem.price),
+        category: newItem.category,
+        description: newItem.description
+      };
+      setCatalog([...catalog, product]);
+      setNewItem({ name: '', price: '', category: 'Hardware', description: '' });
+    };
+
+    const handleDeleteProduct = (id) => {
+      setCatalog(catalog.filter(p => p.id !== id));
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center gap-4 mb-6">
+          <Button variant="secondary" icon={ArrowLeft} onClick={() => setActiveTab('dashboard')}>
+            Back
+          </Button>
+          <h1 className="text-2xl font-bold text-slate-800">Configuration</h1>
+        </div>
+
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold mb-4 text-slate-800">Company Information (Editable)</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-1">
+              <label className="text-sm font-medium text-slate-600">Company Name</label>
+              <input
+                value={companyInfo.name}
+                onChange={e => setCompanyInfo({ ...companyInfo, name: e.target.value })}
+                className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+              />
+            </div>
+            <div className="col-span-1">
+              <label className="text-sm font-medium text-slate-600">Address</label>
+              <textarea
+                value={companyInfo.address}
+                onChange={e => setCompanyInfo({ ...companyInfo, address: e.target.value })}
+                className="w-full mt-1 border border-slate-300 rounded px-3 py-2 h-[42px] resize-none"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-600">Email</label>
+              <input
+                value={companyInfo.email}
+                onChange={e => setCompanyInfo({ ...companyInfo, email: e.target.value })}
+                className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-slate-600">Phone</label>
+              <input
+                value={companyInfo.phone}
+                onChange={e => setCompanyInfo({ ...companyInfo, phone: e.target.value })}
+                className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-sm font-medium text-slate-600">GSTIN</label>
+              <input
+                value={companyInfo.gstin}
+                onChange={e => setCompanyInfo({ ...companyInfo, gstin: e.target.value })}
+                className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+              />
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold text-slate-800">Product Catalog</h2>
+            <span className="text-sm text-slate-500">{catalog.length} items active</span>
+          </div>
+
+          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-6 space-y-3">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Product Name</label>
+                <input
+                  value={newItem.name}
+                  onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+                  placeholder="e.g. Science Lab Kit"
+                  className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+                />
+              </div>
+              <div className="w-32">
+                <label className="text-xs font-bold text-slate-500 uppercase">Price (₹)</label>
+                <input
+                  type="number"
+                  value={newItem.price}
+                  onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+                  placeholder="0.00"
+                  className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+                />
+              </div>
+              <div className="w-40">
+                <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
+                <select
+                  value={newItem.category}
+                  onChange={e => setNewItem({ ...newItem, category: e.target.value })}
+                  className="w-full mt-1 border border-slate-300 rounded px-3 py-2 bg-white"
+                >
+                  <option>Hardware</option>
+                  <option>Software</option>
+                  <option>Add-ons</option>
+                  <option>Services</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <label className="text-xs font-bold text-slate-500 uppercase">Description / Details (Optional)</label>
+                <input
+                  value={newItem.description}
+                  onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+                  placeholder="e.g. Dimensions, included software, etc."
+                  className="w-full mt-1 border border-slate-300 rounded px-3 py-2"
+                />
+              </div>
+              <Button onClick={handleAddItem} icon={Plus}>Add Product</Button>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {catalog.map(product => (
+              <div key={product.id} className="py-3 flex justify-between items-start group">
+                <div>
+                  <div className="font-medium text-slate-800">{product.name}</div>
+                  {product.description && <div className="text-xs text-slate-500 mt-1">{product.description}</div>}
+                  <div className="text-xs text-slate-400 mt-1 inline-block bg-slate-100 px-1 rounded">{product.category}</div>
+                </div>
+                <div className="flex items-center gap-6 pt-1">
+                  <div className="font-mono text-slate-600">{formatMoney(product.price)}</div>
+                  <button
+                    onClick={() => handleDeleteProduct(product.id)}
+                    className="text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
+      {renderSidebar()}
+      <main className="flex-1 overflow-auto p-6">
+        {activeTab === 'dashboard' && renderQuoteBuilder()}
+        {activeTab === 'preview' && renderPrintPreview()}
+        {activeTab === 'settings' && renderSettingsView()}
+        {activeTab === 'history' && renderQuotationsHistory()}
+      </main>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+    </div>
+  );
+}
