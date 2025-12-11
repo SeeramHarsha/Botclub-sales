@@ -19,8 +19,10 @@ import {
   Clock,
   Eye,
   Menu,
-  X
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
+import html2canvas from 'html2canvas';
 
 // --- Default Data for BotClub ---
 const INITIAL_CATALOG = [
@@ -95,10 +97,17 @@ const Toast = ({ message, onClose, type = 'error' }) => {
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [catalog, setCatalog] = useState(INITIAL_CATALOG);
+  const [catalog, setCatalog] = useState(() => {
+    const saved = localStorage.getItem('botclub_catalog');
+    return saved ? JSON.parse(saved) : INITIAL_CATALOG;
+  });
   const [companyInfo, setCompanyInfo] = useState(INITIAL_COMPANY_INFO);
   const [toast, setToast] = useState(null);
   const [savedQuotes, setSavedQuotes] = useState([]);
+
+  useEffect(() => {
+    localStorage.setItem('botclub_catalog', JSON.stringify(catalog));
+  }, [catalog]);
 
   // Current Quote State
   const [customerName, setCustomerName] = useState('Sri Chaitanya School');
@@ -230,6 +239,30 @@ export default function App() {
     setNotes(quote.notes);
     setActiveTab('preview');
     setToast({ message: "Quote loaded from history.", type: 'success' });
+  };
+
+  const handleDownloadImage = async () => {
+    const element = document.getElementById('quote-preview-content');
+    if (!element) return;
+
+    try {
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher quality
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+
+      const image = canvas.toDataURL("image/png");
+      const link = document.createElement('a');
+      link.href = image;
+      link.download = `BotClub_Quote_${customerName.replace(/\s+/g, '_')}_${Date.now()}.png`;
+      link.click();
+      setToast({ message: "Quote saved as image!", type: 'success' });
+    } catch (error) {
+      console.error("Image generation failed", error);
+      setToast({ message: "Failed to save image.", type: 'error' });
+    }
   };
 
   // --- VIEWS ---
@@ -531,8 +564,8 @@ export default function App() {
   );
 
   const renderPrintPreview = () => (
-    <div className="max-w-4xl mx-auto h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
+    <div className="max-w-4xl mx-auto h-full flex flex-col print:block print:h-auto print:w-full print:max-w-none">
+      <div className="flex justify-between items-center mb-6 print:hidden">
         <Button variant="secondary" icon={ArrowLeft} onClick={() => setActiveTab('dashboard')}>
           Back to Editor
         </Button>
@@ -540,13 +573,16 @@ export default function App() {
           <Button variant="secondary" icon={Save} onClick={handleSaveQuote}>
             Save to History
           </Button>
+          <Button variant="secondary" icon={ImageIcon} onClick={handleDownloadImage}>
+            Save as Image
+          </Button>
           <Button variant="primary" icon={Printer} onClick={() => window.print()}>
             Print / Save PDF
           </Button>
         </div>
       </div>
 
-      <div className="bg-white shadow-lg p-12 min-h-[1000px] print:shadow-none print:p-0">
+      <div id="quote-preview-content" className="bg-white shadow-lg p-12 min-h-[1000px] print:shadow-none print:p-0">
         <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
           <div>
             <div className="text-3xl font-bold text-blue-800">BotClub</div>
@@ -897,12 +933,14 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden">
-      {renderSidebar()}
+    <div className="flex h-screen bg-slate-100 font-sans text-slate-900 overflow-hidden print:h-auto print:overflow-visible">
+      <div className="print:hidden">
+        {renderSidebar()}
+      </div>
 
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden print:h-auto print:overflow-visible print:block">
         {/* Mobile Header */}
-        <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between md:hidden flex-shrink-0">
+        <header className="bg-white border-b border-slate-200 p-4 flex items-center justify-between md:hidden flex-shrink-0 print:hidden">
           <div className="flex items-center gap-2 font-bold text-slate-800">
             <Briefcase className="w-6 h-6 text-blue-600" />
             <span>BotClub</span>
@@ -915,7 +953,7 @@ export default function App() {
           </button>
         </header>
 
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 print:overflow-visible print:h-auto print:p-0">
           {activeTab === 'dashboard' && renderQuoteBuilder()}
           {activeTab === 'preview' && renderPrintPreview()}
           {activeTab === 'settings' && renderSettingsView()}
