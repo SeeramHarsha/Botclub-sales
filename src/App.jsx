@@ -114,6 +114,7 @@ export default function App() {
   const [customerContact, setCustomerContact] = useState('Mr. Srinivas (Admin)');
   const [customerPhone, setCustomerPhone] = useState('+91 98765 43210');
   const [customerEmail, setCustomerEmail] = useState('admin@srichaitanya.edu');
+  const [customerAddress, setCustomerAddress] = useState('Visakhapatnam, Andhra Pradesh');
   const [quoteItems, setQuoteItems] = useState([]);
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(18);
@@ -384,6 +385,14 @@ export default function App() {
                 className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">Address</label>
+              <textarea
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none h-20 resize-none"
+              />
+            </div>
           </div>
         </Card>
 
@@ -603,6 +612,7 @@ export default function App() {
           <div className="w-1/2">
             <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Quote For</h3>
             <div className="text-slate-800 font-semibold text-lg">{customerName}</div>
+            <div className="text-slate-600 whitespace-pre-wrap mb-1">{customerAddress}</div>
             <div className="text-slate-600 mb-1">{customerContact}</div>
             {customerEmail && <div className="text-slate-500 text-sm">{customerEmail}</div>}
             {customerPhone && <div className="text-slate-500 text-sm">{customerPhone}</div>}
