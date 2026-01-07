@@ -20,7 +20,8 @@ import {
   Eye,
   Menu,
   X,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Landmark
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
@@ -597,13 +598,16 @@ export default function App() {
             <div className="text-3xl font-bold text-blue-800">BotClub</div>
             <p className="text-slate-500 text-sm mt-1">Teaching & Learning Solutions</p>
           </div>
-          <div className="text-right text-sm text-slate-600 max-w-[300px]">
-            <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
-            <div className="whitespace-pre-wrap">{companyInfo.address}</div>
-            <div className="mt-2">
-              <div>{companyInfo.email}</div>
-              <div>{companyInfo.phone}</div>
-              <div className="font-medium text-slate-800 mt-1">GSTIN: {companyInfo.gstin}</div>
+          <div className="text-right">
+            <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">Proforma Invoice</h1>
+            <div className="text-sm text-slate-600 max-w-[300px] ml-auto">
+              <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
+              <div className="whitespace-pre-wrap">{companyInfo.address}</div>
+              <div className="mt-2">
+                <div>{companyInfo.email}</div>
+                <div>{companyInfo.phone}</div>
+                <div className="font-medium text-slate-800 mt-1">GSTIN: {companyInfo.gstin}</div>
+              </div>
             </div>
           </div>
         </div>
@@ -692,14 +696,41 @@ export default function App() {
           </div>
         </div>
 
-        <div className="mt-12">
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
+            <h4 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2">
+              <Landmark className="w-4 h-4 text-blue-600" />
+              Bank Details
+            </h4>
+            <div className="text-sm space-y-3">
+              <div className="font-bold text-slate-800 tracking-wide text-base border-b border-slate-200 pb-2">BOTCLUB PRIVATE LIMITED</div>
+              <div className="grid grid-cols-[80px_1fr] gap-y-1.5 gap-x-4 text-slate-600">
+                <span className="font-medium text-slate-500">Bank</span>
+                <span className="font-medium text-slate-900">IDFC FIRST</span>
+
+                <span className="font-medium text-slate-500">A/C No</span>
+                <span className="font-mono font-bold text-slate-900 tracking-wide">10173843631</span>
+
+                <span className="font-medium text-slate-500">IFSC</span>
+                <span className="font-mono font-medium text-slate-900">IDFB0080412</span>
+
+                <span className="font-medium text-slate-500">Branch</span>
+                <span className="text-slate-900">Visakhapatnam - Daba Garden Branch</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            {/* Spacer for right side */}
+          </div>
+        </div>
+
+        <div className="mt-8">
           <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
             <Clock className="w-4 h-4 text-blue-600" />
             Subscription Terms
           </h4>
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed">
-            <strong>Notice:</strong> The pricing for software products listed in this quotation (such as Classroom Presentation Application and Pro Dashboards) reflects <strong>monthly subscription costs</strong>.
-            By accepting this quote, the client agrees to a minimum <strong>24-month renewal commitment</strong> for all subscription-based services.
+            <strong>Notice:</strong> The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.
           </div>
         </div>
 
