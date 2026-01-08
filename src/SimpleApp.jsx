@@ -48,6 +48,9 @@ const INITIAL_COMPANY_INFO = {
     gstin: "37AAGCB8306B1ZZ"
 };
 
+const INITIAL_SUBSCRIPTION_TERMS = "Notice: The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.";
+const INITIAL_DEFAULT_NOTES = "Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.";
+
 const Card = ({ children, className = "" }) => (
     <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
         {children}
@@ -98,17 +101,45 @@ export default function SimpleApp() {
         return saved ? JSON.parse(saved) : INITIAL_CATALOG;
     });
 
+    const [subscriptionTerms, setSubscriptionTerms] = useState(() => {
+        const saved = localStorage.getItem('botclub_subscription_terms');
+        return saved || INITIAL_SUBSCRIPTION_TERMS;
+    });
+
+    const [defaultNotes, setDefaultNotes] = useState(() => {
+        const saved = localStorage.getItem('botclub_default_notes');
+        return saved || INITIAL_DEFAULT_NOTES;
+    });
+
+    const [companyInfo, setCompanyInfo] = useState(() => {
+        const saved = localStorage.getItem('botclub_company_info');
+        return saved ? JSON.parse(saved) : INITIAL_COMPANY_INFO;
+    });
+
     // Listen for changes from the admin app
     React.useEffect(() => {
         const handleStorageChange = (e) => {
             if (e.key === 'botclub_catalog' && e.newValue) {
                 setCatalog(JSON.parse(e.newValue));
             }
+            if (e.key === 'botclub_subscription_terms' && e.newValue) {
+                setSubscriptionTerms(e.newValue);
+            }
+            if (e.key === 'botclub_company_info' && e.newValue) {
+                setCompanyInfo(JSON.parse(e.newValue));
+            }
+            if (e.key === 'botclub_default_notes' && e.newValue) {
+                setDefaultNotes(e.newValue);
+            }
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
     }, []);
-    const [companyInfo] = useState(INITIAL_COMPANY_INFO);
+
+    // Update notes when defaultNotes changes
+    React.useEffect(() => {
+        setNotes(defaultNotes);
+    }, [defaultNotes]);
     const [toast, setToast] = useState(null);
 
     // Current Quote State
@@ -120,11 +151,29 @@ export default function SimpleApp() {
     const [quoteItems, setQuoteItems] = useState([]);
     const [globalDiscount, setGlobalDiscount] = useState(0);
     const [taxRate, setTaxRate] = useState(18);
-    const [notes, setNotes] = useState('Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.');
+    const [notes, setNotes] = useState(defaultNotes);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const formatMoney = (amount) => {
         return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+    };
+
+    const numberToWords = (num) => {
+        const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+        const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+        if ((num = Math.floor(num).toString()).length > 9) return 'overflow';
+        const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+        if (!n) return '';
+
+        let str = '';
+        str += (Number(n[1]) !== 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+        str += (Number(n[2]) !== 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+        str += (Number(n[3]) !== 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+        str += (Number(n[4]) !== 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+        str += (Number(n[5]) !== 0) ? ((str !== '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+
+        return str.trim();
     };
 
     const isLocked = (productId) => {
@@ -174,11 +223,11 @@ export default function SimpleApp() {
         }, 0);
 
         const discountAmount = subtotal * (gDisc / 100);
-        const afterGlobalDiscount = subtotal - discountAmount;
-        const taxAmount = afterGlobalDiscount * (tax / 100);
-        const total = afterGlobalDiscount + taxAmount;
+        const taxableAmount = subtotal - discountAmount;
+        const taxAmount = taxableAmount * (tax / 100);
+        const total = taxableAmount + taxAmount;
 
-        return { subtotal, discountAmount, taxAmount, total };
+        return { subtotal, discountAmount, taxableAmount, taxAmount, total };
     };
 
     const totals = calculateTotals();
@@ -459,6 +508,11 @@ export default function SimpleApp() {
                                 </div>
                             )}
 
+                            <div className="flex justify-between text-slate-400 font-medium">
+                                <span>Taxable Amount</span>
+                                <span>{formatMoney(totals.taxableAmount)}</span>
+                            </div>
+
                             <div className="flex justify-between items-center text-slate-400 pt-2 border-t border-slate-800">
                                 <span>GST Rate (%)</span>
                                 <input
@@ -598,6 +652,10 @@ export default function SimpleApp() {
                             <span>-{formatMoney(totals.discountAmount)}</span>
                         </div>
                     )}
+                    <div className="flex justify-between w-64 font-medium text-slate-800">
+                        <span>Taxable Amount:</span>
+                        <span>{formatMoney(totals.taxableAmount)}</span>
+                    </div>
                     <div className="flex justify-between w-64">
                         <span>GST ({taxRate}%):</span>
                         <span className="font-medium">{formatMoney(totals.taxAmount)}</span>
@@ -605,6 +663,9 @@ export default function SimpleApp() {
                     <div className="flex justify-between w-64 text-xl font-bold text-slate-900 border-t-2 border-slate-800 pt-4 mt-2">
                         <span>Total:</span>
                         <span>{formatMoney(totals.total)}</span>
+                    </div>
+                    <div className="w-64 text-right text-xs text-slate-700 mt-1 font-bold">
+                        Rupees {numberToWords(totals.total)} Only
                     </div>
                     <div className="w-64 text-right text-xs text-slate-500 mt-1">
                         * Includes monthly subscription items
@@ -644,8 +705,8 @@ export default function SimpleApp() {
                         <Clock className="w-4 h-4 text-blue-600" />
                         Subscription Terms
                     </h4>
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed">
-                        <strong>Notice:</strong> The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed whitespace-pre-wrap">
+                        {subscriptionTerms}
                     </div>
                 </div>
 
