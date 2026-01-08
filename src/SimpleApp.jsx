@@ -50,6 +50,7 @@ const INITIAL_COMPANY_INFO = {
 
 const INITIAL_SUBSCRIPTION_TERMS = "Notice: The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.";
 const INITIAL_DEFAULT_NOTES = "Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.";
+const INITIAL_DOC_TITLE = "Proforma Invoice";
 
 const Card = ({ children, className = "" }) => (
     <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -111,6 +112,11 @@ export default function SimpleApp() {
         return saved || INITIAL_DEFAULT_NOTES;
     });
 
+    const [docTitle, setDocTitle] = useState(() => {
+        const saved = localStorage.getItem('botclub_doc_title');
+        return saved || INITIAL_DOC_TITLE;
+    });
+
     const [companyInfo, setCompanyInfo] = useState(() => {
         const saved = localStorage.getItem('botclub_company_info');
         return saved ? JSON.parse(saved) : INITIAL_COMPANY_INFO;
@@ -130,6 +136,9 @@ export default function SimpleApp() {
             }
             if (e.key === 'botclub_default_notes' && e.newValue) {
                 setDefaultNotes(e.newValue);
+            }
+            if (e.key === 'botclub_doc_title' && e.newValue) {
+                setDocTitle(e.newValue);
             }
         };
         window.addEventListener('storage', handleStorageChange);
@@ -568,7 +577,7 @@ export default function SimpleApp() {
                         <p className="text-slate-500 text-sm mt-1">Teaching & Learning Solutions</p>
                     </div>
                     <div className="text-right">
-                        <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">Proforma Invoice</h1>
+                        <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">{docTitle}</h1>
                         <div className="text-sm text-slate-600 max-w-[300px] ml-auto">
                             <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
                             <div className="whitespace-pre-wrap">{companyInfo.address}</div>
@@ -652,7 +661,10 @@ export default function SimpleApp() {
                             <span>-{formatMoney(totals.discountAmount)}</span>
                         </div>
                     )}
-                    <div className="flex justify-between w-64 font-medium text-slate-800">
+
+                    <div className="w-64 border-t border-slate-300 my-1"></div>
+
+                    <div className="flex justify-between w-64 text-lg font-bold text-slate-800">
                         <span>Taxable Amount:</span>
                         <span>{formatMoney(totals.taxableAmount)}</span>
                     </div>

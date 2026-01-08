@@ -55,6 +55,7 @@ const INITIAL_COMPANY_INFO = {
 
 const INITIAL_SUBSCRIPTION_TERMS = "Notice: The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.";
 const INITIAL_DEFAULT_NOTES = "Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.";
+const INITIAL_DOC_TITLE = "Proforma Invoice";
 
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -122,6 +123,11 @@ export default function App() {
     return saved || INITIAL_DEFAULT_NOTES;
   });
 
+  const [docTitle, setDocTitle] = useState(() => {
+    const saved = localStorage.getItem('botclub_doc_title');
+    return saved || INITIAL_DOC_TITLE;
+  });
+
   const [toast, setToast] = useState(null);
   const [savedQuotes, setSavedQuotes] = useState([]);
 
@@ -140,6 +146,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('botclub_default_notes', defaultNotes);
   }, [defaultNotes]);
+
+  useEffect(() => {
+    localStorage.setItem('botclub_doc_title', docTitle);
+  }, [docTitle]);
 
   // Current Quote State
   const [customerName, setCustomerName] = useState('Sri Chaitanya School');
@@ -658,7 +668,7 @@ export default function App() {
             <p className="text-slate-500 text-sm mt-1">Teaching & Learning Solutions</p>
           </div>
           <div className="text-right">
-            <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">Proforma Invoice</h1>
+            <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">{docTitle}</h1>
             <div className="text-sm text-slate-600 max-w-[300px] ml-auto">
               <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
               <div className="whitespace-pre-wrap">{companyInfo.address}</div>
@@ -742,7 +752,10 @@ export default function App() {
               <span>-{formatMoney(totals.discountAmount)}</span>
             </div>
           )}
-          <div className="flex justify-between w-64 font-medium text-slate-800">
+
+          <div className="w-64 border-t border-slate-300 my-1"></div>
+
+          <div className="flex justify-between w-64 text-lg font-bold text-slate-800">
             <span>Taxable Amount:</span>
             <span>{formatMoney(totals.taxableAmount)}</span>
           </div>
@@ -962,6 +975,18 @@ export default function App() {
         <Card className="p-6">
           <h2 className="text-lg font-semibold mb-4 text-slate-800">Terms & Conditions Configuration</h2>
           <div className="space-y-6">
+            <div>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">Document Title</label>
+              <select
+                value={docTitle}
+                onChange={e => setDocTitle(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="Proforma Invoice">Proforma Invoice</option>
+                <option value="Tax Invoice">Tax Invoice</option>
+                <option value="Quotation">Quotation</option>
+              </select>
+            </div>
             <div>
               <label className="text-sm font-medium text-slate-600 mb-2 block">Subscription Terms (Displayed in Blue Box)</label>
               <textarea
