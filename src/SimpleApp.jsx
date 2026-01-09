@@ -16,20 +16,21 @@ import {
     Trash2,
     Clock,
     Image as ImageIcon,
+    GripVertical,
     Landmark
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 
 // --- Default Data for BotClub ---
 const INITIAL_CATALOG = [
-    { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.' },
-    { id: 2, name: 'Classroom presentation application', category: 'Software', price: 3000.00, description: 'Interactive software for classroom smart boards. (Monthly License)' },
-    { id: 3, name: 'Teacher pro dashboard', category: 'Software', price: 1500.00, description: 'Advanced analytics and class management tools for teachers. (Monthly License)' },
-    { id: 4, name: 'Principal pro dashboard', category: 'Software', price: 500.00, description: 'High-level oversight and reporting module for school administration. (Monthly License)' },
-    { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.' },
-    { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.' },
-    { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.' },
-    { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.' },
+    { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.', paymentType: 'Subscription' },
+    { id: 2, name: 'Classroom presentation application', category: 'Software', price: 3000.00, description: 'Interactive software for classroom smart boards. (Monthly License)', paymentType: 'Subscription' },
+    { id: 3, name: 'Teacher pro dashboard', category: 'Software', price: 1500.00, description: 'Advanced analytics and class management tools for teachers. (Monthly License)', paymentType: 'Subscription' },
+    { id: 4, name: 'Principal pro dashboard', category: 'Software', price: 500.00, description: 'High-level oversight and reporting module for school administration. (Monthly License)', paymentType: 'Subscription' },
+    { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.', paymentType: 'Subscription' },
+    { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.', paymentType: 'Subscription' },
+    { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.', paymentType: 'Subscription' },
+    { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.', paymentType: 'Subscription' },
 ];
 
 // --- Dependency Rules ---
@@ -117,6 +118,8 @@ export default function SimpleApp() {
         return saved || INITIAL_DOC_TITLE;
     });
 
+
+
     const [companyInfo, setCompanyInfo] = useState(() => {
         const saved = localStorage.getItem('botclub_company_info');
         return saved ? JSON.parse(saved) : INITIAL_COMPANY_INFO;
@@ -140,6 +143,7 @@ export default function SimpleApp() {
             if (e.key === 'botclub_doc_title' && e.newValue) {
                 setDocTitle(e.newValue);
             }
+
         };
         window.addEventListener('storage', handleStorageChange);
         return () => window.removeEventListener('storage', handleStorageChange);
@@ -189,6 +193,28 @@ export default function SimpleApp() {
         const rule = DEPENDENCIES[productId];
         if (!rule) return false;
         return !quoteItems.some(item => item.id === rule.requiredId);
+    };
+
+    const [draggedItemIndex, setDraggedItemIndex] = useState(null);
+
+    const handleDragStart = (index) => {
+        setDraggedItemIndex(index);
+    };
+
+    const handleDragEnter = (index) => {
+        if (draggedItemIndex === null || draggedItemIndex === index) return;
+
+        const newItems = [...quoteItems];
+        const draggedItem = newItems[draggedItemIndex];
+        newItems.splice(draggedItemIndex, 1);
+        newItems.splice(index, 0, draggedItem);
+
+        setQuoteItems(newItems);
+        setDraggedItemIndex(index);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedItemIndex(null);
     };
 
     const addToQuote = (product) => {
@@ -436,18 +462,32 @@ export default function SimpleApp() {
                     ) : (
                         <div className="space-y-3">
                             <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">
-                                <div className="col-span-5">Item</div>
+                                <div className="col-span-4">Item</div>
                                 <div className="col-span-2 text-center">Qty</div>
                                 <div className="col-span-2 text-right">Price</div>
                                 <div className="col-span-2 text-right">Disc %</div>
-                                <div className="col-span-1"></div>
+                                <div className="col-span-2"></div>
                             </div>
 
-                            {quoteItems.map((item) => (
-                                <div key={item.uid} className="grid grid-cols-12 gap-4 items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                    <div className="col-span-5">
-                                        <div className="font-medium text-slate-800">{item.name}</div>
-                                        <div className="text-xs text-slate-500">{item.description}</div>
+                            {quoteItems.map((item, index) => (
+                                <div
+                                    key={item.uid}
+                                    draggable
+                                    onDragStart={() => handleDragStart(index)}
+                                    onDragEnter={() => handleDragEnter(index)}
+                                    onDragEnd={handleDragEnd}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    className={`grid grid-cols-12 gap-4 items-center bg-slate-50 p-2 rounded-lg border border-slate-100 transition-all ${draggedItemIndex === index ? 'opacity-50 ring-2 ring-blue-500 bg-blue-50' : ''
+                                        }`}
+                                >
+                                    <div className="col-span-4 flex items-center gap-2">
+                                        <div className="cursor-grab active:cursor-grabbing text-slate-400 hover:text-blue-600">
+                                            <GripVertical className="w-5 h-5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="font-medium text-slate-800 truncate">{item.name}</div>
+                                            <div className="text-xs text-slate-500 truncate">{item.description}</div>
+                                        </div>
                                     </div>
                                     <div className="col-span-2">
                                         <input
@@ -471,8 +511,8 @@ export default function SimpleApp() {
                                             className="w-full text-right border border-slate-300 rounded px-2 py-1 focus:ring-blue-500"
                                         />
                                     </div>
-                                    <div className="col-span-1 text-right">
-                                        <button onClick={() => removeItem(item.uid)} className="text-slate-400 hover:text-red-500">
+                                    <div className="col-span-2 text-right">
+                                        <button onClick={() => removeItem(item.uid)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded" title="Remove">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
@@ -570,14 +610,14 @@ export default function SimpleApp() {
                 </div>
             </div>
 
-            <div id="quote-preview-content" className="bg-white shadow-lg p-12 min-h-[1000px] print:shadow-none print:p-0">
-                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-8 mb-8">
+            <div id="quote-preview-content" className="bg-white shadow-lg p-8 min-h-[1000px] print:shadow-none print:p-0">
+                <div className="flex justify-between items-start border-b-2 border-slate-100 pb-4 mb-4">
                     <div>
                         <div className="text-3xl font-bold text-blue-800">BotClub</div>
                         <p className="text-slate-500 text-sm mt-1">Teaching & Learning Solutions</p>
                     </div>
                     <div className="text-right">
-                        <h1 className="text-3xl font-bold text-slate-800 uppercase tracking-wider mb-6">{docTitle}</h1>
+                        <h1 className="text-2xl font-bold text-slate-800 uppercase tracking-wider mb-2">{docTitle}</h1>
                         <div className="text-sm text-slate-600 max-w-[300px] ml-auto">
                             <div className="font-bold text-lg text-slate-800 mb-1">{companyInfo.name}</div>
                             <div className="whitespace-pre-wrap">{companyInfo.address}</div>
@@ -590,9 +630,9 @@ export default function SimpleApp() {
                     </div>
                 </div>
 
-                <div className="flex justify-between mb-12">
+                <div className="flex justify-between mb-6">
                     <div className="w-1/2">
-                        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Quote For</h3>
+                        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Quote For</h3>
                         <div className="text-slate-800 font-semibold text-lg">{customerName}</div>
                         <div className="text-slate-600 whitespace-pre-wrap mb-1">{customerAddress}</div>
                         <div className="text-slate-600 mb-1">{customerContact}</div>
@@ -600,7 +640,7 @@ export default function SimpleApp() {
                         {customerPhone && <div className="text-slate-500 text-sm">{customerPhone}</div>}
                     </div>
                     <div className="w-1/2 text-right">
-                        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-2">Quote Details</h3>
+                        <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Quote Details</h3>
                         <div className="flex justify-end gap-8">
                             <div>
                                 <span className="block text-xs text-slate-500">Date</span>
@@ -614,85 +654,119 @@ export default function SimpleApp() {
                     </div>
                 </div>
 
-                <table className="w-full mb-8">
-                    <thead>
-                        <tr className="border-b-2 border-slate-800">
-                            <th className="text-left py-3 font-bold text-slate-800 w-1/2">Description</th>
-                            <th className="text-center py-3 font-bold text-slate-800">Qty</th>
-                            <th className="text-right py-3 font-bold text-slate-800">Unit Price</th>
-                            <th className="text-right py-3 font-bold text-slate-800">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody className="text-sm">
-                        {quoteItems.map((item) => (
-                            <tr key={item.uid} className="border-b border-slate-100">
-                                <td className="py-4 text-slate-700">
-                                    <div className="font-medium text-base">{item.name}</div>
-                                    {item.description && <div className="text-xs text-slate-500 mt-1">{item.description}</div>}
-                                    <div className="text-xs text-slate-400 mt-0.5 inline-block bg-slate-50 px-1 rounded">{item.category}</div>
-                                </td>
-                                <td className="py-4 text-center text-slate-700 align-top pt-5">{item.quantity}</td>
-                                <td className="py-4 text-right text-slate-700 align-top pt-5">
-                                    {item.discount > 0 ? (
-                                        <div>
-                                            <span className="line-through text-slate-400 text-xs mr-2">{formatMoney(item.price)}</span>
-                                            <span>{formatMoney(item.price * (1 - item.discount / 100))}</span>
+                {(() => {
+                    const oneTimeItems = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'One-time Payment');
+                    const subscriptionItems = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'Subscription');
+
+                    const oneTimeTotals = calculateTotals(oneTimeItems);
+                    const subTotals = calculateTotals(subscriptionItems);
+
+                    const renderSection = (title, items, sectionTotals, isSubscription) => (
+                        <div className="mb-6">
+                            <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider border-b-2 border-slate-800 pb-1 mb-2">{title}</h3>
+                            <table className="w-full mb-4">
+                                <thead>
+                                    <tr className="border-b border-slate-200">
+                                        <th className="text-left py-1 font-bold text-slate-600 w-1/2 text-xs">Description</th>
+                                        <th className="text-center py-1 font-bold text-slate-600 text-xs">Qty</th>
+                                        <th className="text-right py-1 font-bold text-slate-600 text-xs">Unit Price</th>
+                                        <th className="text-right py-1 font-bold text-slate-600 text-xs">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="text-sm">
+                                    {items.map((item) => (
+                                        <tr key={item.uid} className="border-b border-slate-50">
+                                            <td className="py-2 text-slate-700">
+                                                <div className="font-medium text-sm">{item.name}</div>
+                                                {item.description && <div className="text-xs text-slate-500">{item.description}</div>}
+                                                <div className="text-[10px] text-slate-400 mt-0.5 inline-block bg-slate-50 px-1 rounded">{item.category}</div>
+                                            </td>
+                                            <td className="py-2 text-center text-slate-700 align-top pt-2">{item.quantity}</td>
+                                            <td className="py-2 text-right text-slate-700 align-top pt-2">
+                                                {item.discount > 0 ? (
+                                                    <div>
+                                                        <span className="line-through text-slate-400 text-xs mr-2">{formatMoney(item.price)}</span>
+                                                        <span>{formatMoney(item.price * (1 - item.discount / 100))}</span>
+                                                    </div>
+                                                ) : (
+                                                    formatMoney(item.price)
+                                                )}
+                                            </td>
+                                            <td className="py-2 text-right font-medium text-slate-800 align-top pt-2">
+                                                {formatMoney(item.quantity * item.price * (1 - item.discount / 100))}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+
+                            <div className="flex flex-col items-end gap-1 text-sm text-slate-600">
+                                <div className="flex justify-between w-64">
+                                    <span>Subtotal:</span>
+                                    <span className="font-medium">{formatMoney(sectionTotals.subtotal)}</span>
+                                </div>
+                                {globalDiscount > 0 && (
+                                    <div className="flex justify-between w-64 text-green-600">
+                                        <span>Discount ({globalDiscount}%):</span>
+                                        <span>-{formatMoney(sectionTotals.discountAmount)}</span>
+                                    </div>
+                                )}
+
+                                <div className="w-64 border-t border-slate-300 my-1"></div>
+
+                                <div className="flex justify-between w-64 text-base font-bold text-slate-800">
+                                    <span>Taxable Amount:</span>
+                                    <span>{formatMoney(sectionTotals.taxableAmount)}</span>
+                                </div>
+
+                                {docTitle === 'Proforma Invoice' ? (
+                                    <div className="w-64 py-1">
+                                        <p className="text-red-600 font-bold text-xs leading-tight">
+                                            GST @18% will be applicable as per government norms and added in the final invoice
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between w-64">
+                                            <span>GST ({taxRate}%):</span>
+                                            <span className="font-medium">{formatMoney(sectionTotals.taxAmount)}</span>
                                         </div>
-                                    ) : (
-                                        formatMoney(item.price)
-                                    )}
-                                </td>
-                                <td className="py-4 text-right font-medium text-slate-800 align-top pt-5">
-                                    {formatMoney(item.quantity * item.price * (1 - item.discount / 100))}
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                                        <div className="flex justify-between w-64 text-lg font-bold text-slate-900 border-t-2 border-slate-800 pt-2 mt-1">
+                                            <span>Total {isSubscription ? '(Monthly)' : '(One-time)'}:</span>
+                                            <span>{formatMoney(sectionTotals.total)}</span>
+                                        </div>
+                                    </>
+                                )}
 
-                <div className="flex flex-col items-end gap-2 text-sm text-slate-600 border-t border-slate-100 pt-8">
-                    <div className="flex justify-between w-64">
-                        <span>Subtotal:</span>
-                        <span className="font-medium">{formatMoney(totals.subtotal)}</span>
-                    </div>
-                    {globalDiscount > 0 && (
-                        <div className="flex justify-between w-64 text-green-600">
-                            <span>Discount ({globalDiscount}%):</span>
-                            <span>-{formatMoney(totals.discountAmount)}</span>
+                                <div className="w-64 text-right text-xs text-slate-700 mt-1 font-bold">
+                                    Rupees {numberToWords(docTitle === 'Proforma Invoice' ? sectionTotals.taxableAmount : sectionTotals.total)} Only
+                                </div>
+                                {isSubscription && (
+                                    <div className="w-64 text-right text-xs text-slate-500">
+                                        * Includes monthly subscription items
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    )}
+                    );
 
-                    <div className="w-64 border-t border-slate-300 my-1"></div>
+                    return (
+                        <>
+                            {oneTimeItems.length > 0 && renderSection("One-time Charges", oneTimeItems, oneTimeTotals, false)}
+                            {subscriptionItems.length > 0 && renderSection("Monthly Subscription Charges", subscriptionItems, subTotals, true)}
+                        </>
+                    );
+                })()}
 
-                    <div className="flex justify-between w-64 text-lg font-bold text-slate-800">
-                        <span>Taxable Amount:</span>
-                        <span>{formatMoney(totals.taxableAmount)}</span>
-                    </div>
-                    <div className="flex justify-between w-64">
-                        <span>GST ({taxRate}%):</span>
-                        <span className="font-medium">{formatMoney(totals.taxAmount)}</span>
-                    </div>
-                    <div className="flex justify-between w-64 text-xl font-bold text-slate-900 border-t-2 border-slate-800 pt-4 mt-2">
-                        <span>Total:</span>
-                        <span>{formatMoney(totals.total)}</span>
-                    </div>
-                    <div className="w-64 text-right text-xs text-slate-700 mt-1 font-bold">
-                        Rupees {numberToWords(totals.total)} Only
-                    </div>
-                    <div className="w-64 text-right text-xs text-slate-500 mt-1">
-                        * Includes monthly subscription items
-                    </div>
-                </div>
-
-                <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-slate-50 p-5 rounded-xl border border-slate-200">
-                        <h4 className="font-bold text-slate-800 text-sm mb-4 flex items-center gap-2">
+                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                        <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
                             <Landmark className="w-4 h-4 text-blue-600" />
                             Bank Details
                         </h4>
-                        <div className="text-sm space-y-3">
-                            <div className="font-bold text-slate-800 tracking-wide text-base border-b border-slate-200 pb-2">BOTCLUB PRIVATE LIMITED</div>
-                            <div className="grid grid-cols-[80px_1fr] gap-y-1.5 gap-x-4 text-slate-600">
+                        <div className="text-sm space-y-2">
+                            <div className="font-bold text-slate-800 tracking-wide text-sm border-b border-slate-200 pb-1">BOTCLUB PRIVATE LIMITED</div>
+                            <div className="grid grid-cols-[70px_1fr] gap-y-1 gap-x-4 text-slate-600">
                                 <span className="font-medium text-slate-500">Bank</span>
                                 <span className="font-medium text-slate-900">IDFC FIRST</span>
 
@@ -712,15 +786,17 @@ export default function SimpleApp() {
                     </div>
                 </div>
 
-                <div className="mt-8">
-                    <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-blue-600" />
-                        Subscription Terms
-                    </h4>
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed whitespace-pre-wrap">
-                        {subscriptionTerms}
+                {quoteItems.some(item => item.paymentType === 'Subscription') && (
+                    <div className="mt-8">
+                        <h4 className="font-bold text-slate-800 text-sm mb-2 flex items-center gap-2">
+                            <Clock className="w-4 h-4 text-blue-600" />
+                            Subscription Terms
+                        </h4>
+                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed whitespace-pre-wrap">
+                            {subscriptionTerms}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <div className="mt-8 pt-8 border-t border-slate-100">
                     <h4 className="font-bold text-slate-800 text-sm mb-2">Terms & Notes</h4>
