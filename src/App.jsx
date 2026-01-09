@@ -28,14 +28,14 @@ import html2canvas from 'html2canvas';
 
 // --- Default Data for BotClub ---
 const INITIAL_CATALOG = [
-  { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.', paymentType: 'One-time Payment' },
+  { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.', paymentType: 'Subscription' },
   { id: 2, name: 'Classroom presentation application', category: 'Software', price: 3000.00, description: 'Interactive software for classroom smart boards. (Monthly License)', paymentType: 'Subscription' },
   { id: 3, name: 'Teacher pro dashboard', category: 'Software', price: 1500.00, description: 'Advanced analytics and class management tools for teachers. (Monthly License)', paymentType: 'Subscription' },
   { id: 4, name: 'Principal pro dashboard', category: 'Software', price: 500.00, description: 'High-level oversight and reporting module for school administration. (Monthly License)', paymentType: 'Subscription' },
-  { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.', paymentType: 'One-time Payment' },
-  { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.', paymentType: 'One-time Payment' },
-  { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.', paymentType: 'One-time Payment' },
-  { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.', paymentType: 'One-time Payment' },
+  { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.', paymentType: 'Subscription' },
+  { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.', paymentType: 'Subscription' },
+  { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.', paymentType: 'Subscription' },
+  { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.', paymentType: 'Subscription' },
 ];
 
 // --- Dependency Rules ---
