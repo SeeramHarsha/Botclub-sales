@@ -24,14 +24,14 @@ import html2canvas from 'html2canvas';
 
 // --- Default Data for BotClub ---
 const INITIAL_CATALOG = [
-    { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.', paymentType: 'Subscription' },
+    { id: 1, name: 'Physical models (x32 models)', category: 'Hardware', price: 5450.00, description: 'Comprehensive set of 32 physical learning models for hands-on activities.', paymentType: 'One-time Payment' },
     { id: 2, name: 'Classroom presentation application', category: 'Software', price: 3000.00, description: 'Interactive software for classroom smart boards. (Monthly License)', paymentType: 'Subscription' },
     { id: 3, name: 'Teacher pro dashboard', category: 'Software', price: 1500.00, description: 'Advanced analytics and class management tools for teachers. (Monthly License)', paymentType: 'Subscription' },
     { id: 4, name: 'Principal pro dashboard', category: 'Software', price: 500.00, description: 'High-level oversight and reporting module for school administration. (Monthly License)', paymentType: 'Subscription' },
-    { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.', paymentType: 'Subscription' },
-    { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.', paymentType: 'Subscription' },
-    { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.', paymentType: 'Subscription' },
-    { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.', paymentType: 'Subscription' },
+    { id: 5, name: 'TV', category: 'Add-ons', price: 834.00, description: 'Display unit for classroom content.', paymentType: 'One-time Payment' },
+    { id: 6, name: 'Module for TV screens', category: 'Add-ons', price: 625.00, description: 'Hardware interface module to connect TV with learning system.', paymentType: 'One-time Payment' },
+    { id: 7, name: 'Tablet (with pre-installed software)', category: 'Add-ons', price: 625.00, description: 'Student tablet device pre-loaded with educational apps.', paymentType: 'One-time Payment' },
+    { id: 8, name: 'Storage racks', category: 'Add-ons', price: 625.00, description: 'Durable racks for organizing physical models and kits.', paymentType: 'One-time Payment' },
 ];
 
 // --- Dependency Rules ---
@@ -163,7 +163,8 @@ export default function SimpleApp() {
     const [customerEmail, setCustomerEmail] = useState('admin@srichaitanya.edu');
     const [customerAddress, setCustomerAddress] = useState('Visakhapatnam, Andhra Pradesh');
     const [quoteItems, setQuoteItems] = useState([]);
-    const [globalDiscount, setGlobalDiscount] = useState(0);
+    const [hardwareDiscount, setHardwareDiscount] = useState(0);
+    const [subscriptionDiscount, setSubscriptionDiscount] = useState(0);
     const [taxRate, setTaxRate] = useState(18);
     const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
 
@@ -253,14 +254,14 @@ export default function SimpleApp() {
         setQuoteItems(items => items.filter(item => item.uid !== uid));
     };
 
-    const calculateTotals = (items = quoteItems, gDisc = globalDiscount, tax = taxRate) => {
+    const calculateTotals = (items = quoteItems, discountPercentage = 0, tax = taxRate) => {
         const subtotal = items.reduce((acc, item) => {
             const itemTotal = item.price * item.quantity;
-            const itemDiscounted = itemTotal * (1 - (item.discount / 100));
+            const itemDiscounted = itemTotal * (1 - (item.discount / 100)); // Item level discount
             return acc + itemDiscounted;
         }, 0);
 
-        const discountAmount = subtotal * (gDisc / 100);
+        const discountAmount = subtotal * (discountPercentage / 100);
         const taxableAmount = subtotal - discountAmount;
         const taxAmount = taxableAmount * (tax / 100);
         const total = taxableAmount + taxAmount;
@@ -268,7 +269,19 @@ export default function SimpleApp() {
         return { subtotal, discountAmount, taxableAmount, taxAmount, total };
     };
 
-    const totals = calculateTotals();
+    const oneTimeIds = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'One-time Payment');
+    const subIds = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'Subscription');
+
+    const oneTimeTotals = calculateTotals(oneTimeIds, hardwareDiscount);
+    const subTotals = calculateTotals(subIds, subscriptionDiscount);
+
+    const totals = {
+        subtotal: oneTimeTotals.subtotal + subTotals.subtotal,
+        discountAmount: oneTimeTotals.discountAmount + subTotals.discountAmount,
+        taxableAmount: oneTimeTotals.taxableAmount + subTotals.taxableAmount,
+        taxAmount: oneTimeTotals.taxAmount + subTotals.taxAmount,
+        total: oneTimeTotals.total + subTotals.total
+    };
 
     const handleDownloadImage = async () => {
         const element = document.getElementById('quote-preview-content');
@@ -558,12 +571,24 @@ export default function SimpleApp() {
                             </div>
 
                             <div className="flex justify-between items-center text-slate-400">
-                                <span>Global Discount</span>
+                                <span>Hardware Discount</span>
                                 <div className="flex items-center w-20">
                                     <input
                                         type="number"
-                                        value={globalDiscount}
-                                        onChange={(e) => setGlobalDiscount(parseFloat(e.target.value) || 0)}
+                                        value={hardwareDiscount}
+                                        onChange={(e) => setHardwareDiscount(parseFloat(e.target.value) || 0)}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
+                                    />
+                                    <span className="ml-1">%</span>
+                                </div>
+                            </div>
+                            <div className="flex justify-between items-center text-slate-400">
+                                <span>Subscription Discount</span>
+                                <div className="flex items-center w-20">
+                                    <input
+                                        type="number"
+                                        value={subscriptionDiscount}
+                                        onChange={(e) => setSubscriptionDiscount(parseFloat(e.target.value) || 0)}
                                         className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
                                     />
                                     <span className="ml-1">%</span>
@@ -678,10 +703,10 @@ export default function SimpleApp() {
                     const oneTimeItems = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'One-time Payment');
                     const subscriptionItems = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'Subscription');
 
-                    const oneTimeTotals = calculateTotals(oneTimeItems);
-                    const subTotals = calculateTotals(subscriptionItems);
+                    const oneTimeTotals = calculateTotals(oneTimeItems, hardwareDiscount);
+                    const subTotals = calculateTotals(subscriptionItems, subscriptionDiscount);
 
-                    const renderSection = (title, items, sectionTotals, isSubscription) => (
+                    const renderSection = (title, items, sectionTotals, isSubscription, appliedDiscount) => (
                         <div className="mb-6">
                             <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider border-b-2 border-slate-800 pb-1 mb-2">{title}</h3>
                             <table className="w-full mb-4">
@@ -725,9 +750,9 @@ export default function SimpleApp() {
                                     <span>Subtotal:</span>
                                     <span className="font-medium">{formatMoney(sectionTotals.subtotal)}</span>
                                 </div>
-                                {globalDiscount > 0 && (
+                                {appliedDiscount > 0 && (
                                     <div className="flex justify-between w-64 text-green-600">
-                                        <span>Discount ({globalDiscount}%):</span>
+                                        <span>Discount ({appliedDiscount}%):</span>
                                         <span>-{formatMoney(sectionTotals.discountAmount)}</span>
                                     </div>
                                 )}
@@ -767,10 +792,10 @@ export default function SimpleApp() {
                         <>
                             {sectionOrder.map(section => {
                                 if (section === 'hardware' && oneTimeItems.length > 0) {
-                                    return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false);
+                                    return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false, hardwareDiscount);
                                 }
                                 if (section === 'subscription' && subscriptionItems.length > 0) {
-                                    return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true);
+                                    return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true, subscriptionDiscount);
                                 }
                                 return null;
                             })}
