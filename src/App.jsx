@@ -162,6 +162,7 @@ export default function App() {
   const [globalDiscount, setGlobalDiscount] = useState(0);
   const [taxRate, setTaxRate] = useState(18);
   const [notes, setNotes] = useState(defaultNotes);
+  const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
 
   // Update notes when defaultNotes changes (e.g. from Settings)
   useEffect(() => {
@@ -807,13 +808,7 @@ export default function App() {
                   <span>{formatMoney(sectionTotals.taxableAmount)}</span>
                 </div>
 
-                {docTitle === 'Proforma Invoice' ? (
-                  <div className="w-64 py-1">
-                    <p className="text-red-600 font-bold text-xs leading-tight">
-                      GST @18% will be applicable as per government norms and added in the final invoice
-                    </p>
-                  </div>
-                ) : (
+                {docTitle !== 'Proforma Invoice' && (
                   <>
                     <div className="flex justify-between w-64">
                       <span>GST ({taxRate}%):</span>
@@ -840,8 +835,23 @@ export default function App() {
 
           return (
             <>
-              {oneTimeItems.length > 0 && renderSection("One-time Charges", oneTimeItems, oneTimeTotals, false)}
-              {subscriptionItems.length > 0 && renderSection("Monthly Subscription Charges", subscriptionItems, subTotals, true)}
+              {sectionOrder.map(section => {
+                if (section === 'hardware' && oneTimeItems.length > 0) {
+                  return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false);
+                }
+                if (section === 'subscription' && subscriptionItems.length > 0) {
+                  return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true);
+                }
+                return null;
+              })}
+
+              {docTitle === 'Proforma Invoice' && (
+                <div className="mt-4 text-left">
+                  <p className="text-red-600 font-bold text-xs">
+                    * GST @18% will be applicable as per government norms and added in the final invoice
+                  </p>
+                </div>
+              )}
             </>
           );
         })()}
@@ -1062,7 +1072,20 @@ export default function App() {
               </select>
             </div>
 
-
+            <div>
+              <label className="text-sm font-medium text-slate-600 mb-2 block">Invoice Section Order</label>
+              <select
+                value={sectionOrder[0]}
+                onChange={e => {
+                  const first = e.target.value;
+                  setSectionOrder(first === 'hardware' ? ['hardware', 'subscription'] : ['subscription', 'hardware']);
+                }}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="hardware">Hardware First</option>
+                <option value="subscription">Subscription First</option>
+              </select>
+            </div>
 
             <div>
               <label className="text-sm font-medium text-slate-600 mb-2 block">Subscription Terms (Displayed in Blue Box)</label>
@@ -1083,7 +1106,7 @@ export default function App() {
               <p className="text-xs text-slate-500 mt-1">This is the default text for the "Terms & Notes" field when creating a new quote.</p>
             </div>
           </div>
-        </Card>
+        </Card >
 
         <Card className="p-6">
           <div className="flex justify-between items-center mb-6">
@@ -1177,7 +1200,7 @@ export default function App() {
             ))}
           </div>
         </Card>
-      </div>
+      </div >
     );
   };
 

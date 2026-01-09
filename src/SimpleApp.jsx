@@ -17,6 +17,7 @@ import {
     Clock,
     Image as ImageIcon,
     GripVertical,
+    ArrowDownUp,
     Landmark
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -164,7 +165,9 @@ export default function SimpleApp() {
     const [quoteItems, setQuoteItems] = useState([]);
     const [globalDiscount, setGlobalDiscount] = useState(0);
     const [taxRate, setTaxRate] = useState(18);
-    const [notes, setNotes] = useState(defaultNotes);
+    const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
+
+    // Dependencies logic
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const formatMoney = (amount) => {
@@ -333,6 +336,23 @@ export default function SimpleApp() {
                         <span>Quote Builder</span>
                     </button>
 
+                    <div className="flex flex-col gap-2">
+                        <button
+                            onClick={() => setActiveTab('settings')}
+                            className={`p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-slate-800 text-white shadow-lg shadow-slate-900/20' : 'bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600 border border-slate-200'}`}
+                        >
+                            <Users className="w-6 h-6" />
+                            <span className="text-xs font-semibold">Client</span>
+                        </button>
+                        <button
+                            onClick={() => setSectionOrder(prev => prev[0] === 'hardware' ? ['subscription', 'hardware'] : ['hardware', 'subscription'])}
+                            className="p-4 rounded-xl flex flex-col items-center justify-center gap-2 transition-all bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-600 border border-slate-200"
+                            title="Toggle Section Order"
+                        >
+                            <ArrowDownUp className="w-6 h-6" />
+                            <span className="text-xs font-semibold">Order</span>
+                        </button>
+                    </div>
                     <button
                         onClick={() => { setActiveTab('preview'); setIsMobileMenuOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'preview' ? 'bg-blue-600 text-white' : 'hover:bg-slate-800'}`}
@@ -711,7 +731,6 @@ export default function SimpleApp() {
                                         <span>-{formatMoney(sectionTotals.discountAmount)}</span>
                                     </div>
                                 )}
-
                                 <div className="w-64 border-t border-slate-300 my-1"></div>
 
                                 <div className="flex justify-between w-64 text-base font-bold text-slate-800">
@@ -719,13 +738,7 @@ export default function SimpleApp() {
                                     <span>{formatMoney(sectionTotals.taxableAmount)}</span>
                                 </div>
 
-                                {docTitle === 'Proforma Invoice' ? (
-                                    <div className="w-64 py-1">
-                                        <p className="text-red-600 font-bold text-xs leading-tight">
-                                            GST @18% will be applicable as per government norms and added in the final invoice
-                                        </p>
-                                    </div>
-                                ) : (
+                                {docTitle !== 'Proforma Invoice' && (
                                     <>
                                         <div className="flex justify-between w-64">
                                             <span>GST ({taxRate}%):</span>
@@ -752,8 +765,23 @@ export default function SimpleApp() {
 
                     return (
                         <>
-                            {oneTimeItems.length > 0 && renderSection("One-time Charges", oneTimeItems, oneTimeTotals, false)}
-                            {subscriptionItems.length > 0 && renderSection("Monthly Subscription Charges", subscriptionItems, subTotals, true)}
+                            {sectionOrder.map(section => {
+                                if (section === 'hardware' && oneTimeItems.length > 0) {
+                                    return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false);
+                                }
+                                if (section === 'subscription' && subscriptionItems.length > 0) {
+                                    return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true);
+                                }
+                                return null;
+                            })}
+
+                            {docTitle === 'Proforma Invoice' && (
+                                <div className="mt-4 text-left">
+                                    <p className="text-red-600 font-bold text-xs">
+                                        * GST @18% will be applicable as per government norms and added in the final invoice
+                                    </p>
+                                </div>
+                            )}
                         </>
                     );
                 })()}
