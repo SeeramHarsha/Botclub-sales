@@ -257,13 +257,13 @@ export default function SimpleApp() {
     const calculateTotals = (items = quoteItems, discountPercentage = 0, tax = taxRate) => {
         const subtotal = items.reduce((acc, item) => {
             const itemTotal = item.price * item.quantity;
-            const itemDiscounted = itemTotal * (1 - (item.discount / 100)); // Item level discount
+            const itemDiscounted = Math.round(itemTotal * (1 - (item.discount / 100))); // Item level discount
             return acc + itemDiscounted;
         }, 0);
 
-        const discountAmount = subtotal * (discountPercentage / 100);
+        const discountAmount = Math.round(subtotal * (discountPercentage / 100));
         const taxableAmount = subtotal - discountAmount;
-        const taxAmount = taxableAmount * (tax / 100);
+        const taxAmount = Math.round(taxableAmount * (tax / 100));
         const total = taxableAmount + taxAmount;
 
         return { subtotal, discountAmount, taxableAmount, taxAmount, total };

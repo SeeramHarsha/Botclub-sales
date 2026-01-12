@@ -94,7 +94,7 @@ const Toast = ({ message, onClose, type = 'error' }) => {
   };
 
   return (
-    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50`}>
+    <div className={`fixed bottom-6 right-6 ${bgColors[type]} text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-bottom-5 z-50 print:hidden`}>
       {type === 'error' ? <AlertCircle className="w-5 h-5" /> : <Check className="w-5 h-5" />}
       <span className="text-sm font-medium">{message}</span>
     </div>
@@ -174,17 +174,18 @@ export default function App() {
   const [newItem, setNewItem] = useState({ name: '', price: '', category: 'Hardware', description: '', paymentType: 'Subscription' });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Load quotes from local storage on mount
+  // Load quotes from LocalStorage on mount
   useEffect(() => {
-    const loadedQuotes = localStorage.getItem('botclub_saved_quotes');
-    if (loadedQuotes) {
-      try {
-        setSavedQuotes(JSON.parse(loadedQuotes));
-      } catch (e) {
-        console.error("Failed to parse saved quotes", e);
-      }
+    const saved = localStorage.getItem('botclub_saved_quotes');
+    if (saved) {
+      setSavedQuotes(JSON.parse(saved));
     }
   }, []);
+
+  // Persist quotes to LocalStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('botclub_saved_quotes', JSON.stringify(savedQuotes));
+  }, [savedQuotes]);
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -272,13 +273,13 @@ export default function App() {
   const calculateTotals = (items = quoteItems, discountPercentage = 0, tax = taxRate) => {
     const subtotal = items.reduce((acc, item) => {
       const itemTotal = item.price * item.quantity;
-      const itemDiscounted = itemTotal * (1 - (item.discount / 100)); // Item level discount
+      const itemDiscounted = Math.round(itemTotal * (1 - (item.discount / 100))); // Item level discount
       return acc + itemDiscounted;
     }, 0);
 
-    const discountAmount = subtotal * (discountPercentage / 100);
+    const discountAmount = Math.round(subtotal * (discountPercentage / 100));
     const taxableAmount = subtotal - discountAmount;
-    const taxAmount = taxableAmount * (tax / 100);
+    const taxAmount = Math.round(taxableAmount * (tax / 100));
     const total = taxableAmount + taxAmount;
 
     return { subtotal, discountAmount, taxableAmount, taxAmount, total };
@@ -319,16 +320,13 @@ export default function App() {
       totals
     };
 
-    const updatedQuotes = [newQuote, ...savedQuotes];
-    setSavedQuotes(updatedQuotes);
-    localStorage.setItem('botclub_saved_quotes', JSON.stringify(updatedQuotes));
+    setSavedQuotes([newQuote, ...savedQuotes]);
     setToast({ message: "Quote saved successfully!", type: 'success' });
   };
 
   const handleDeleteQuote = (id) => {
     const updatedQuotes = savedQuotes.filter(q => q.id !== id);
     setSavedQuotes(updatedQuotes);
-    localStorage.setItem('botclub_saved_quotes', JSON.stringify(updatedQuotes));
     setToast({ message: "Quote deleted.", type: 'success' });
   };
 
