@@ -54,9 +54,11 @@ const INITIAL_COMPANY_INFO = {
   gstin: "37AAGCB8306B1ZZ"
 };
 
-const INITIAL_SUBSCRIPTION_TERMS = "Notice: The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.";
+const INITIAL_SUBSCRIPTION_TERMS = "Notice:\n- The pricing reflects monthly subscription costs.\n- Minimum 24-month renewal commitment required.\n- All services are subject to standard subscription terms.";
 const INITIAL_DEFAULT_NOTES = "Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.";
 const INITIAL_DOC_TITLE = "Proforma Invoice";
+const INITIAL_ONE_TIME_TITLE = "Hardware Only - One time Charges";
+const INITIAL_SUBSCRIPTION_TITLE = "Subscription - Monthly ( Hardware + Software)";
 
 const Card = ({ children, className = "" }) => (
   <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -129,6 +131,16 @@ export default function App() {
     return saved || INITIAL_DOC_TITLE;
   });
 
+  const [oneTimeTitle, setOneTimeTitle] = useState(() => {
+    const saved = localStorage.getItem('botclub_one_time_title');
+    return saved || INITIAL_ONE_TIME_TITLE;
+  });
+
+  const [subscriptionTitle, setSubscriptionTitle] = useState(() => {
+    const saved = localStorage.getItem('botclub_subscription_title');
+    return saved || INITIAL_SUBSCRIPTION_TITLE;
+  });
+
   const [toast, setToast] = useState(null);
   const [savedQuotes, setSavedQuotes] = useState([]);
 
@@ -151,6 +163,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('botclub_doc_title', docTitle);
   }, [docTitle]);
+
+  useEffect(() => {
+    localStorage.setItem('botclub_one_time_title', oneTimeTitle);
+  }, [oneTimeTitle]);
+
+  useEffect(() => {
+    localStorage.setItem('botclub_subscription_title', subscriptionTitle);
+  }, [subscriptionTitle]);
 
   // Current Quote State
   const [customerName, setCustomerName] = useState('Sri Chaitanya School');
@@ -760,10 +780,6 @@ export default function App() {
                 <span className="block text-xs text-slate-500">Date</span>
                 <span className="font-medium">{new Date().toLocaleDateString('en-IN')}</span>
               </div>
-              <div>
-                <span className="block text-xs text-slate-500">Valid Until</span>
-                <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN')}</span>
-              </div>
             </div>
           </div>
         </div>
@@ -862,10 +878,10 @@ export default function App() {
             <>
               {sectionOrder.map(section => {
                 if (section === 'hardware' && oneTimeItems.length > 0) {
-                  return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false, hardwareDiscount);
+                  return renderSection(oneTimeTitle, oneTimeItems, oneTimeTotals, false, hardwareDiscount);
                 }
                 if (section === 'subscription' && subscriptionItems.length > 0) {
-                  return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true, subscriptionDiscount);
+                  return renderSection(subscriptionTitle, subscriptionItems, subTotals, true, subscriptionDiscount);
                 }
                 return null;
               })}
@@ -915,7 +931,7 @@ export default function App() {
               <Clock className="w-4 h-4 text-blue-600" />
               Subscription Terms
             </h4>
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed whitespace-pre-wrap">
               {subscriptionTerms}
             </div>
           </div>
@@ -1110,6 +1126,27 @@ export default function App() {
                 <option value="hardware">Hardware First</option>
                 <option value="subscription">Subscription First</option>
               </select>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">One-time Section Title</label>
+                <input
+                  type="text"
+                  value={oneTimeTitle}
+                  onChange={e => setOneTimeTitle(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-600 mb-2 block">Subscription Section Title</label>
+                <input
+                  type="text"
+                  value={subscriptionTitle}
+                  onChange={e => setSubscriptionTitle(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

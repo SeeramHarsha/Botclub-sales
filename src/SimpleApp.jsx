@@ -50,9 +50,11 @@ const INITIAL_COMPANY_INFO = {
     gstin: "37AAGCB8306B1ZZ"
 };
 
-const INITIAL_SUBSCRIPTION_TERMS = "Notice: The pricing for products listed in this quotation reflects monthly subscription costs. By accepting this quote, the client agrees to a minimum 24-month renewal commitment for all subscription-based services.";
+const INITIAL_SUBSCRIPTION_TERMS = "Notice:\n- The pricing reflects monthly subscription costs.\n- Minimum 24-month renewal commitment required.\n- All services are subject to standard subscription terms.";
 const INITIAL_DEFAULT_NOTES = "Quote valid for 30 days. Payment terms: 50% advance, 50% on delivery.";
 const INITIAL_DOC_TITLE = "Proforma Invoice";
+const INITIAL_ONE_TIME_TITLE = "Hardware Only - One time Charges";
+const INITIAL_SUBSCRIPTION_TITLE = "Subscription - Monthly ( Hardware + Software)";
 
 const Card = ({ children, className = "" }) => (
     <div className={`bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden ${className}`}>
@@ -119,6 +121,16 @@ export default function SimpleApp() {
         return saved || INITIAL_DOC_TITLE;
     });
 
+    const [oneTimeTitle, setOneTimeTitle] = useState(() => {
+        const saved = localStorage.getItem('botclub_one_time_title');
+        return saved || INITIAL_ONE_TIME_TITLE;
+    });
+
+    const [subscriptionTitle, setSubscriptionTitle] = useState(() => {
+        const saved = localStorage.getItem('botclub_subscription_title');
+        return saved || INITIAL_SUBSCRIPTION_TITLE;
+    });
+
 
 
     const [companyInfo, setCompanyInfo] = useState(() => {
@@ -143,6 +155,12 @@ export default function SimpleApp() {
             }
             if (e.key === 'botclub_doc_title' && e.newValue) {
                 setDocTitle(e.newValue);
+            }
+            if (e.key === 'botclub_one_time_title' && e.newValue) {
+                setOneTimeTitle(e.newValue);
+            }
+            if (e.key === 'botclub_subscription_title' && e.newValue) {
+                setSubscriptionTitle(e.newValue);
             }
 
         };
@@ -691,10 +709,6 @@ export default function SimpleApp() {
                                 <span className="block text-xs text-slate-500">Date</span>
                                 <span className="font-medium">{new Date().toLocaleDateString('en-IN')}</span>
                             </div>
-                            <div>
-                                <span className="block text-xs text-slate-500">Valid Until</span>
-                                <span className="font-medium">{new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-IN')}</span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -792,10 +806,10 @@ export default function SimpleApp() {
                         <>
                             {sectionOrder.map(section => {
                                 if (section === 'hardware' && oneTimeItems.length > 0) {
-                                    return renderSection("Hardware Only - One time Charges", oneTimeItems, oneTimeTotals, false, hardwareDiscount);
+                                    return renderSection(oneTimeTitle, oneTimeItems, oneTimeTotals, false, hardwareDiscount);
                                 }
                                 if (section === 'subscription' && subscriptionItems.length > 0) {
-                                    return renderSection("Subscription - Monthly ( Hardware + Software)", subscriptionItems, subTotals, true, subscriptionDiscount);
+                                    return renderSection(subscriptionTitle, subscriptionItems, subTotals, true, subscriptionDiscount);
                                 }
                                 return null;
                             })}
