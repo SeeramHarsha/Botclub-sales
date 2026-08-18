@@ -162,6 +162,12 @@ export default function SimpleApp() {
             if (e.key === 'botclub_subscription_title' && e.newValue) {
                 setSubscriptionTitle(e.newValue);
             }
+            if (e.key === 'botclub_doc_number' && e.newValue) {
+                setDocNumber(e.newValue);
+            }
+            if (e.key === 'botclub_show_gst_disclaimer' && e.newValue) {
+                setShowGstDisclaimer(JSON.parse(e.newValue));
+            }
 
         };
         window.addEventListener('storage', handleStorageChange);
@@ -185,6 +191,20 @@ export default function SimpleApp() {
     const [subscriptionDiscount, setSubscriptionDiscount] = useState(0);
     const [taxRate, setTaxRate] = useState(18);
     const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
+
+    const [docNumber, setDocNumber] = useState(() => localStorage.getItem('botclub_doc_number') || 'BCS/2026/001');
+    const [showGstDisclaimer, setShowGstDisclaimer] = useState(() => {
+        const saved = localStorage.getItem('botclub_show_gst_disclaimer');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    React.useEffect(() => {
+        localStorage.setItem('botclub_doc_number', docNumber);
+    }, [docNumber]);
+
+    React.useEffect(() => {
+        localStorage.setItem('botclub_show_gst_disclaimer', JSON.stringify(showGstDisclaimer));
+    }, [showGstDisclaimer]);
 
     // Dependencies logic
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -440,6 +460,18 @@ export default function SimpleApp() {
                                 value={customerEmail}
                                 onChange={(e) => setCustomerEmail(e.target.value)}
                                 className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-slate-600 mb-2">
+                                {docTitle.toLowerCase().includes('invoice') ? 'Invoice Number' : 'Quote Number'}
+                            </label>
+                            <input
+                                type="text"
+                                value={docNumber}
+                                onChange={(e) => setDocNumber(e.target.value)}
+                                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                                placeholder={docTitle.toLowerCase().includes('invoice') ? 'e.g. BCS/2026/001' : 'e.g. BCQ/2026/001'}
                             />
                         </div>
                         <div className="md:col-span-2">
@@ -708,7 +740,15 @@ export default function SimpleApp() {
                         <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">
                             {docTitle.toLowerCase().includes('invoice') ? 'Invoice Details' : 'Quote Details'}
                         </h3>
-                        <div className="flex justify-end gap-8">
+                        <div className="flex flex-col gap-2 items-end">
+                            {docNumber && (
+                                <div>
+                                    <span className="block text-xs text-slate-500">
+                                        {docTitle.toLowerCase().includes('invoice') ? 'Invoice No.' : 'Quote No.'}
+                                    </span>
+                                    <span className="font-medium">{docNumber}</span>
+                                </div>
+                            )}
                             <div>
                                 <span className="block text-xs text-slate-500">Date</span>
                                 <span className="font-medium">{new Date().toLocaleDateString('en-IN')}</span>
@@ -815,7 +855,7 @@ export default function SimpleApp() {
                                 return null;
                             })}
 
-                            {docTitle === 'Proforma Invoice' && (
+                            {showGstDisclaimer && (
                                 <div className="mt-4 text-left">
                                     <p className="text-red-600 font-bold text-xs">
                                         * GST @18% will be applicable as per government norms and added in the final invoice

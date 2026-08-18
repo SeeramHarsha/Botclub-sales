@@ -185,6 +185,20 @@ export default function App() {
   const [notes, setNotes] = useState(defaultNotes);
   const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
 
+  const [docNumber, setDocNumber] = useState(() => localStorage.getItem('botclub_doc_number') || 'BCS/2026/001');
+  const [showGstDisclaimer, setShowGstDisclaimer] = useState(() => {
+    const saved = localStorage.getItem('botclub_show_gst_disclaimer');
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('botclub_doc_number', docNumber);
+  }, [docNumber]);
+
+  useEffect(() => {
+    localStorage.setItem('botclub_show_gst_disclaimer', JSON.stringify(showGstDisclaimer));
+  }, [showGstDisclaimer]);
+
   // Update notes when defaultNotes changes (e.g. from Settings)
   useEffect(() => {
     setNotes(defaultNotes);
@@ -332,6 +346,8 @@ export default function App() {
       customerContact,
       customerPhone,
       customerEmail,
+      customerAddress,
+      docNumber,
       items: quoteItems,
       hardwareDiscount,
       subscriptionDiscount,
@@ -355,6 +371,8 @@ export default function App() {
     setCustomerContact(quote.customerContact);
     setCustomerPhone(quote.customerPhone);
     setCustomerEmail(quote.customerEmail);
+    if (quote.customerAddress !== undefined) setCustomerAddress(quote.customerAddress);
+    if (quote.docNumber !== undefined) setDocNumber(quote.docNumber);
     setQuoteItems(quote.items);
     setHardwareDiscount(quote.hardwareDiscount || 0);
     setSubscriptionDiscount(quote.subscriptionDiscount || 0);
@@ -505,6 +523,18 @@ export default function App() {
                 value={customerEmail}
                 onChange={(e) => setCustomerEmail(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-slate-600 mb-2">
+                {docTitle.toLowerCase().includes('invoice') ? 'Invoice Number' : 'Quote Number'}
+              </label>
+              <input
+                type="text"
+                value={docNumber}
+                onChange={(e) => setDocNumber(e.target.value)}
+                className="w-full border border-slate-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder={docTitle.toLowerCase().includes('invoice') ? 'e.g. BCS/2026/001' : 'e.g. BCQ/2026/001'}
               />
             </div>
             <div className="md:col-span-2">
@@ -779,7 +809,15 @@ export default function App() {
             <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">
               {docTitle.toLowerCase().includes('invoice') ? 'Invoice Details' : 'Quote Details'}
             </h3>
-            <div className="flex justify-end gap-8">
+            <div className="flex flex-col gap-2 items-end">
+              {docNumber && (
+                <div>
+                  <span className="block text-xs text-slate-500">
+                    {docTitle.toLowerCase().includes('invoice') ? 'Invoice No.' : 'Quote No.'}
+                  </span>
+                  <span className="font-medium">{docNumber}</span>
+                </div>
+              )}
               <div>
                 <span className="block text-xs text-slate-500">Date</span>
                 <span className="font-medium">{new Date().toLocaleDateString('en-IN')}</span>
@@ -887,7 +925,7 @@ export default function App() {
                 return null;
               })}
 
-              {docTitle === 'Proforma Invoice' && (
+              {showGstDisclaimer && (
                 <div className="mt-4 text-left">
                   <p className="text-red-600 font-bold text-xs">
                     * GST @18% will be applicable as per government norms and added in the final invoice
@@ -1112,6 +1150,19 @@ export default function App() {
                 <option value="Tax Invoice">Tax Invoice</option>
                 <option value="Quotation">Quotation</option>
               </select>
+            </div>
+
+            <div className="flex items-center gap-2 py-1">
+              <input
+                type="checkbox"
+                id="showGstDisclaimer"
+                checked={showGstDisclaimer}
+                onChange={e => setShowGstDisclaimer(e.target.checked)}
+                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="showGstDisclaimer" className="text-sm font-medium text-slate-600 cursor-pointer select-none">
+                Show GST disclaimer (* GST @18% will be applicable as per government norms and added in the final invoice)
+              </label>
             </div>
 
             <div>
