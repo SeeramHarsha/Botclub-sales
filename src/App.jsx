@@ -766,7 +766,9 @@ export default function App() {
 
         <div className="flex justify-between mb-6">
           <div className="w-1/2">
-            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Quote For</h3>
+            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">
+              {docTitle.toLowerCase().includes('invoice') ? 'Invoice For' : 'Quote For'}
+            </h3>
             <div className="text-slate-800 font-semibold text-lg">{customerName}</div>
             <div className="text-slate-600 whitespace-pre-wrap mb-1">{customerAddress}</div>
             <div className="text-slate-600 mb-1">{customerContact}</div>
@@ -774,7 +776,9 @@ export default function App() {
             {customerPhone && <div className="text-slate-500 text-sm">{customerPhone}</div>}
           </div>
           <div className="w-1/2 text-right">
-            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">Quote Details</h3>
+            <h3 className="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1">
+              {docTitle.toLowerCase().includes('invoice') ? 'Invoice Details' : 'Quote Details'}
+            </h3>
             <div className="flex justify-end gap-8">
               <div>
                 <span className="block text-xs text-slate-500">Date</span>
@@ -797,9 +801,10 @@ export default function App() {
               <table className="w-full mb-4">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="text-left py-1 font-bold text-slate-600 w-1/2 text-xs">Description</th>
+                    <th className="text-left py-1 font-bold text-slate-600 w-5/12 text-xs">Description</th>
                     <th className="text-center py-1 font-bold text-slate-600 text-xs">Qty</th>
                     <th className="text-right py-1 font-bold text-slate-600 text-xs">Unit Price</th>
+                    <th className="text-right py-1 font-bold text-slate-600 text-xs">Discount</th>
                     <th className="text-right py-1 font-bold text-slate-600 text-xs">Total</th>
                   </tr>
                 </thead>
@@ -813,14 +818,10 @@ export default function App() {
                       </td>
                       <td className="py-2 text-center text-slate-700 align-top pt-2">{item.quantity}</td>
                       <td className="py-2 text-right text-slate-700 align-top pt-2">
-                        {item.discount > 0 ? (
-                          <div>
-                            <span className="line-through text-slate-400 text-xs mr-2">{formatMoney(item.price)}</span>
-                            <span>{formatMoney(item.price * (1 - item.discount / 100))}</span>
-                          </div>
-                        ) : (
-                          formatMoney(item.price)
-                        )}
+                        {formatMoney(item.price)}
+                      </td>
+                      <td className="py-2 text-right text-slate-700 align-top pt-2">
+                        {item.discount > 0 ? `${item.discount}%` : '-'}
                       </td>
                       <td className="py-2 text-right font-medium text-slate-800 align-top pt-2">
                         {formatMoney(item.quantity * item.price * (1 - item.discount / 100))}
