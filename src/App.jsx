@@ -858,7 +858,7 @@ export default function App() {
                       <td className="py-2 text-right text-slate-700 align-top pt-2">
                         {formatMoney(item.price)}
                       </td>
-                      <td className="py-2 text-right text-slate-700 align-top pt-2">
+                      <td className={`py-2 text-right align-top pt-2 ${item.discount > 0 ? 'text-green-600 font-semibold' : 'text-slate-700'}`}>
                         {item.discount > 0 ? `${item.discount}%` : '-'}
                       </td>
                       <td className="py-2 text-right font-medium text-slate-800 align-top pt-2">
