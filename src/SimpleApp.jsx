@@ -888,7 +888,7 @@ export default function SimpleApp() {
                                     <span>{formatMoney(sectionTotals.taxableAmount)}</span>
                                 </div>
 
-                                {docTitle !== 'Proforma Invoice' && (
+                                {docTitle === 'Tax Invoice' && (
                                     <>
                                         <div className="flex justify-between w-64">
                                             <span>CGST ({cgstRate}%):</span>
@@ -906,7 +906,7 @@ export default function SimpleApp() {
                                 )}
 
                                 {(() => {
-                                    const referenceTotal = docTitle === 'Proforma Invoice' ? sectionTotals.taxableAmount : sectionTotals.total;
+                                    const referenceTotal = docTitle !== 'Tax Invoice' ? sectionTotals.taxableAmount : sectionTotals.total;
                                     return enableSplitPayment ? (
                                         <>
                                             <div className="w-64 border-t border-dashed border-slate-300 my-1"></div>
@@ -923,7 +923,7 @@ export default function SimpleApp() {
                                 })()}
 
                                 <div className="w-64 text-right text-xs text-slate-700 mt-1 font-bold">
-                                    Rupees {numberToWords(docTitle === 'Proforma Invoice' ? sectionTotals.taxableAmount : sectionTotals.total)} Only
+                                    Rupees {numberToWords(docTitle !== 'Tax Invoice' ? sectionTotals.taxableAmount : sectionTotals.total)} Only
                                 </div>
                                 {isSubscription && (
                                     <div className="w-64 text-right text-xs text-slate-500">
