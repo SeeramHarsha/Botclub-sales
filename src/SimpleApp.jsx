@@ -138,6 +138,28 @@ export default function SimpleApp() {
         return saved ? JSON.parse(saved) : INITIAL_COMPANY_INFO;
     });
 
+    const [enableSplitPayment, setEnableSplitPayment] = useState(() => {
+        const saved = localStorage.getItem('botclub_enable_split_payment');
+        return saved !== null ? JSON.parse(saved) : false;
+    });
+    const [splitPaymentPercent, setSplitPaymentPercent] = useState(() => {
+        const saved = localStorage.getItem('botclub_split_payment_percent');
+        return saved !== null ? parseFloat(saved) : 50;
+    });
+    const [splitDoneLabel, setSplitDoneLabel] = useState(() => {
+        const saved = localStorage.getItem('botclub_split_done_label');
+        return saved || "Advance Paid";
+    });
+    const [splitRemainingLabel, setSplitRemainingLabel] = useState(() => {
+        const saved = localStorage.getItem('botclub_split_remaining_label');
+        return saved || "Balance Due";
+    });
+
+    const [transactions, setTransactions] = useState(() => {
+        const saved = localStorage.getItem('botclub_transactions');
+        return saved ? JSON.parse(saved) : [];
+    });
+
     // Listen for changes from the admin app
     React.useEffect(() => {
         const handleStorageChange = (e) => {
@@ -168,6 +190,21 @@ export default function SimpleApp() {
             if (e.key === 'botclub_show_gst_disclaimer' && e.newValue) {
                 setShowGstDisclaimer(JSON.parse(e.newValue));
             }
+            if (e.key === 'botclub_enable_split_payment' && e.newValue) {
+                setEnableSplitPayment(JSON.parse(e.newValue));
+            }
+            if (e.key === 'botclub_split_payment_percent' && e.newValue) {
+                setSplitPaymentPercent(parseFloat(e.newValue));
+            }
+            if (e.key === 'botclub_split_done_label' && e.newValue) {
+                setSplitDoneLabel(e.newValue);
+            }
+            if (e.key === 'botclub_split_remaining_label' && e.newValue) {
+                setSplitRemainingLabel(e.newValue);
+            }
+            if (e.key === 'botclub_transactions' && e.newValue) {
+                setTransactions(JSON.parse(e.newValue));
+            }
 
         };
         window.addEventListener('storage', handleStorageChange);
@@ -189,7 +226,8 @@ export default function SimpleApp() {
     const [quoteItems, setQuoteItems] = useState([]);
     const [hardwareDiscount, setHardwareDiscount] = useState(0);
     const [subscriptionDiscount, setSubscriptionDiscount] = useState(0);
-    const [taxRate, setTaxRate] = useState(18);
+    const [cgstRate, setCgstRate] = useState(9);
+    const [sgstRate, setSgstRate] = useState(9);
     const [sectionOrder, setSectionOrder] = useState(['hardware', 'subscription']);
 
     const [docNumber, setDocNumber] = useState(() => localStorage.getItem('botclub_doc_number') || 'BCS/2026/001');
@@ -292,7 +330,7 @@ export default function SimpleApp() {
         setQuoteItems(items => items.filter(item => item.uid !== uid));
     };
 
-    const calculateTotals = (items = quoteItems, discountPercentage = 0, tax = taxRate) => {
+    const calculateTotals = (items = quoteItems, discountPercentage = 0, cgst = cgstRate, sgst = sgstRate) => {
         const subtotal = items.reduce((acc, item) => {
             const itemTotal = item.price * item.quantity;
             const itemDiscounted = Math.round(itemTotal * (1 - (item.discount / 100))); // Item level discount
@@ -301,10 +339,12 @@ export default function SimpleApp() {
 
         const discountAmount = Math.round(subtotal * (discountPercentage / 100));
         const taxableAmount = subtotal - discountAmount;
-        const taxAmount = Math.round(taxableAmount * (tax / 100));
+        const cgstAmount = Math.round(taxableAmount * (cgst / 100));
+        const sgstAmount = Math.round(taxableAmount * (sgst / 100));
+        const taxAmount = cgstAmount + sgstAmount;
         const total = taxableAmount + taxAmount;
 
-        return { subtotal, discountAmount, taxableAmount, taxAmount, total };
+        return { subtotal, discountAmount, taxableAmount, cgstAmount, sgstAmount, taxAmount, total };
     };
 
     const oneTimeIds = quoteItems.filter(i => (i.paymentType || 'Subscription') === 'One-time Payment');
@@ -317,6 +357,8 @@ export default function SimpleApp() {
         subtotal: oneTimeTotals.subtotal + subTotals.subtotal,
         discountAmount: oneTimeTotals.discountAmount + subTotals.discountAmount,
         taxableAmount: oneTimeTotals.taxableAmount + subTotals.taxableAmount,
+        cgstAmount: oneTimeTotals.cgstAmount + subTotals.cgstAmount,
+        sgstAmount: oneTimeTotals.sgstAmount + subTotals.sgstAmount,
         taxAmount: oneTimeTotals.taxAmount + subTotals.taxAmount,
         total: oneTimeTotals.total + subTotals.total
     };
@@ -658,24 +700,52 @@ export default function SimpleApp() {
                             </div>
 
                             <div className="flex justify-between items-center text-slate-400 pt-2 border-t border-slate-800">
-                                <span>GST Rate (%)</span>
+                                <span>CGST Rate (%)</span>
                                 <input
                                     type="number"
-                                    value={taxRate}
-                                    onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+                                    value={cgstRate}
+                                    onChange={(e) => setCgstRate(parseFloat(e.target.value) || 0)}
                                     className="w-16 bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
                                 />
                             </div>
 
                             <div className="flex justify-between text-slate-400">
-                                <span>GST Amount</span>
-                                <span>{formatMoney(totals.taxAmount)}</span>
+                                <span>CGST Amount</span>
+                                <span>{formatMoney(totals.cgstAmount)}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-slate-400 pt-2 border-t border-slate-800">
+                                <span>SGST Rate (%)</span>
+                                <input
+                                    type="number"
+                                    value={sgstRate}
+                                    onChange={(e) => setSgstRate(parseFloat(e.target.value) || 0)}
+                                    className="w-16 bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
+                                />
+                            </div>
+
+                            <div className="flex justify-between text-slate-400">
+                                <span>SGST Amount</span>
+                                <span>{formatMoney(totals.sgstAmount)}</span>
                             </div>
 
                             <div className="flex justify-between text-xl font-bold pt-4 border-t border-slate-700 mt-2">
                                 <span>Total</span>
                                 <span>{formatMoney(totals.total)}</span>
                             </div>
+
+                            {enableSplitPayment && (
+                                <div className="pt-4 border-t border-dashed border-slate-700 mt-2 space-y-2 text-sm">
+                                    <div className="flex justify-between text-emerald-400 font-semibold">
+                                        <span>{splitDoneLabel} ({splitPaymentPercent}%)</span>
+                                        <span>{formatMoney(totals.total * (splitPaymentPercent / 100))}</span>
+                                    </div>
+                                    <div className="flex justify-between text-blue-400 font-semibold">
+                                        <span>{splitRemainingLabel} ({100 - splitPaymentPercent}%)</span>
+                                        <span>{formatMoney(totals.total * (1 - splitPaymentPercent / 100))}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="mt-8 space-y-3">
@@ -821,8 +891,12 @@ export default function SimpleApp() {
                                 {docTitle !== 'Proforma Invoice' && (
                                     <>
                                         <div className="flex justify-between w-64">
-                                            <span>GST ({taxRate}%):</span>
-                                            <span className="font-medium">{formatMoney(sectionTotals.taxAmount)}</span>
+                                            <span>CGST ({cgstRate}%):</span>
+                                            <span className="font-medium">{formatMoney(sectionTotals.cgstAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between w-64">
+                                            <span>SGST ({sgstRate}%):</span>
+                                            <span className="font-medium">{formatMoney(sectionTotals.sgstAmount)}</span>
                                         </div>
                                         <div className="flex justify-between w-64 text-lg font-bold text-slate-900 border-t-2 border-slate-800 pt-2 mt-1">
                                             <span>Total {isSubscription ? '(Monthly)' : '(One-time)'}:</span>
@@ -830,6 +904,23 @@ export default function SimpleApp() {
                                         </div>
                                     </>
                                 )}
+
+                                {(() => {
+                                    const referenceTotal = docTitle === 'Proforma Invoice' ? sectionTotals.taxableAmount : sectionTotals.total;
+                                    return enableSplitPayment ? (
+                                        <>
+                                            <div className="w-64 border-t border-dashed border-slate-300 my-1"></div>
+                                            <div className="flex justify-between w-64 text-sm font-semibold text-emerald-700">
+                                                <span>{splitDoneLabel} ({splitPaymentPercent}%):</span>
+                                                <span>{formatMoney(referenceTotal * (splitPaymentPercent / 100))}</span>
+                                            </div>
+                                            <div className="flex justify-between w-64 text-sm font-bold text-blue-800">
+                                                <span>{splitRemainingLabel} ({100 - splitPaymentPercent}%):</span>
+                                                <span>{formatMoney(referenceTotal * (1 - splitPaymentPercent / 100))}</span>
+                                            </div>
+                                        </>
+                                    ) : null;
+                                })()}
 
                                 <div className="w-64 text-right text-xs text-slate-700 mt-1 font-bold">
                                     Rupees {numberToWords(docTitle === 'Proforma Invoice' ? sectionTotals.taxableAmount : sectionTotals.total)} Only
@@ -903,6 +994,49 @@ export default function SimpleApp() {
                         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-xs text-blue-900 leading-relaxed whitespace-pre-wrap">
                             {subscriptionTerms}
                         </div>
+                    </div>
+                )}
+
+                {enableSplitPayment && transactions.length > 0 && (
+                    <div className="mt-8 border-t border-slate-200 pt-6">
+                        <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                            <History className="w-4 h-4 text-blue-600" />
+                            Transaction Ledger / Payment History
+                        </h4>
+                        <table className="w-full text-xs text-left mb-4 border border-slate-100 rounded-lg overflow-hidden">
+                            <thead className="bg-slate-50 text-slate-500 uppercase font-bold tracking-wider border-b border-slate-200">
+                                <tr>
+                                    <th className="px-4 py-2">Payment Date</th>
+                                    <th className="px-4 py-2">Reference / Description</th>
+                                    <th className="px-4 py-2 text-right">Amount Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 text-slate-700">
+                                {transactions.map(tx => (
+                                    <tr key={tx.id} className="hover:bg-slate-50/50">
+                                        <td className="px-4 py-2">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                                        <td className="px-4 py-2 font-medium">{tx.description}</td>
+                                        <td className="px-4 py-2 text-right font-mono font-medium text-slate-900">{formatMoney(tx.amount)}</td>
+                                    </tr>
+                                ))}
+                                {(() => {
+                                    const totalPaid = transactions.reduce((acc, tx) => acc + tx.amount, 0);
+                                    const outstandingBalance = totals.total - totalPaid;
+                                    return (
+                                        <>
+                                            <tr className="bg-slate-100/50 font-semibold text-slate-800">
+                                                <td className="px-4 py-2" colSpan="2">Total Paid:</td>
+                                                <td className="px-4 py-2 text-right font-mono font-bold text-emerald-700">{formatMoney(totalPaid)}</td>
+                                            </tr>
+                                            <tr className="bg-blue-50/30 font-bold text-slate-900 border-t-2 border-blue-100">
+                                                <td className="px-4 py-2 text-sm" colSpan="2">Net Outstanding Balance:</td>
+                                                <td className="px-4 py-2 text-right font-mono text-sm text-blue-700">{formatMoney(outstandingBalance)}</td>
+                                            </tr>
+                                        </>
+                                    );
+                                })()}
+                            </tbody>
+                        </table>
                     </div>
                 )}
 
