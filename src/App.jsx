@@ -181,6 +181,8 @@ export default function App() {
   const [quoteItems, setQuoteItems] = useState([]);
   const [hardwareDiscount, setHardwareDiscount] = useState(0);
   const [subscriptionDiscount, setSubscriptionDiscount] = useState(0);
+  const [hardwareDiscMode, setHardwareDiscMode] = useState('percent');
+  const [subDiscMode, setSubDiscMode] = useState('percent');
   const [cgstRate, setCgstRate] = useState(9);
   const [sgstRate, setSgstRate] = useState(9);
   const [notes, setNotes] = useState(defaultNotes);
@@ -361,7 +363,7 @@ export default function App() {
 
   const updateItem = (uid, field, value) => {
     setQuoteItems(items => items.map(item =>
-      item.uid === uid ? { ...item, [field]: parseFloat(value) || 0 } : item
+      item.uid === uid ? { ...item, [field]: field === 'discountMode' ? value : (parseFloat(value) || 0) } : item
     ));
   };
 
@@ -687,12 +689,12 @@ export default function App() {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-12 gap-4 text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">
+              <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider px-2">
                 <div className="col-span-4">Item</div>
-                <div className="col-span-2 text-center">Qty</div>
+                <div className="col-span-1 text-center">Qty</div>
                 <div className="col-span-2 text-right">Price</div>
-                <div className="col-span-2 text-right">Disc %</div>
-                <div className="col-span-2"></div>
+                <div className="col-span-4 text-right">Discount (% / ₹)</div>
+                <div className="col-span-1"></div>
               </div>
 
               {quoteItems.map((item, index) => (
@@ -703,7 +705,7 @@ export default function App() {
                   onDragEnter={() => handleDragEnter(index)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(e) => e.preventDefault()}
-                  className={`grid grid-cols-12 gap-4 items-center bg-slate-50 p-2 rounded-lg border border-slate-100 transition-all ${draggedItemIndex === index ? 'opacity-50 ring-2 ring-blue-500 bg-blue-50' : ''
+                  className={`grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded-lg border border-slate-100 transition-all ${draggedItemIndex === index ? 'opacity-50 ring-2 ring-blue-500 bg-blue-50' : ''
                     }`}
                 >
                   <div className="col-span-4 flex items-center gap-2">
@@ -715,29 +717,75 @@ export default function App() {
                       <div className="text-xs text-slate-500 truncate">{item.description}</div>
                     </div>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1">
                     <input
                       type="number"
                       min="1"
                       value={item.quantity}
                       onChange={(e) => updateItem(item.uid, 'quantity', e.target.value)}
-                      className="w-full text-center border border-slate-300 rounded px-2 py-1 focus:ring-blue-500"
+                      className="w-full text-center border border-slate-300 rounded px-1 py-1 focus:ring-blue-500 text-sm"
                     />
                   </div>
                   <div className="col-span-2 text-right text-sm font-medium text-slate-700">
                     {formatMoney(item.price)}
                   </div>
-                  <div className="col-span-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={item.discount}
-                      onChange={(e) => updateItem(item.uid, 'discount', e.target.value)}
-                      className="w-full text-right border border-slate-300 rounded px-2 py-1 focus:ring-blue-500"
-                    />
+                  <div className="col-span-4 flex flex-col items-end gap-0.5">
+                    <div className="flex items-center gap-1 w-full justify-end">
+                      <div className="flex bg-slate-200 rounded p-0.5 text-[10px]">
+                        <button
+                          type="button"
+                          title="Discount in Percentage (%)"
+                          onClick={() => updateItem(item.uid, 'discountMode', 'percent')}
+                          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${(!item.discountMode || item.discountMode === 'percent') ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          %
+                        </button>
+                        <button
+                          type="button"
+                          title="Discount in Amount (₹)"
+                          onClick={() => updateItem(item.uid, 'discountMode', 'amount')}
+                          className={`px-1.5 py-0.5 rounded font-bold transition-colors ${item.discountMode === 'amount' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          ₹
+                        </button>
+                      </div>
+                      {(!item.discountMode || item.discountMode === 'percent') ? (
+                        <div className="flex items-center w-24">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={item.discount}
+                            onChange={(e) => updateItem(item.uid, 'discount', Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                            className="w-full text-right border border-slate-300 rounded px-2 py-1 text-sm focus:ring-blue-500 bg-white"
+                          />
+                          <span className="ml-1 text-xs text-slate-500 font-medium">%</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center w-28">
+                          <span className="mr-1 text-xs text-slate-500 font-medium">₹</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={Math.round(item.quantity * item.price * (item.discount / 100))}
+                            onChange={(e) => {
+                              const itemGross = item.quantity * item.price;
+                              const amt = parseFloat(e.target.value) || 0;
+                              const pct = itemGross > 0 ? (amt / itemGross) * 100 : 0;
+                              updateItem(item.uid, 'discount', Math.min(100, Math.max(0, pct)));
+                            }}
+                            className="w-full text-right border border-slate-300 rounded px-2 py-1 text-sm focus:ring-blue-500 bg-white"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-medium">
+                      {(!item.discountMode || item.discountMode === 'percent')
+                        ? `= ${formatMoney(item.quantity * item.price * (item.discount / 100))}`
+                        : `= ${item.discount.toFixed(1)}%`}
+                    </div>
                   </div>
-                  <div className="col-span-2 text-right">
+                  <div className="col-span-1 text-right">
                     <button onClick={() => removeItem(item.uid)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded" title="Remove">
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -748,94 +796,92 @@ export default function App() {
           )}
         </Card>
 
-        {enableSplitPayment && (
-          <Card className="p-6">
-            <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Payment History / Transactions Ledger
-            </h2>
-            <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-200 mb-6 space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Date</label>
+        <Card className="p-6">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <History className="w-5 h-5 text-blue-600" />
+            Payment History / Transactions Ledger
+          </h2>
+          <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-200 mb-6 space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-1">
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Date</label>
+                <input
+                  type="date"
+                  value={newTxDate}
+                  onChange={e => setNewTxDate(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="md:col-span-1">
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Amount Paid (₹)</label>
+                <input
+                  type="number"
+                  value={newTxAmount}
+                  onChange={e => setNewTxAmount(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Description / Ref No.</label>
+                <div className="flex gap-2">
                   <input
-                    type="date"
-                    value={newTxDate}
-                    onChange={e => setNewTxDate(e.target.value)}
+                    type="text"
+                    value={newTxDesc}
+                    onChange={e => setNewTxDesc(e.target.value)}
+                    placeholder="e.g. Advance, Cheque, UPI"
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
-                </div>
-                <div className="md:col-span-1">
-                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Amount Paid (₹)</label>
-                  <input
-                    type="number"
-                    value={newTxAmount}
-                    onChange={e => setNewTxAmount(e.target.value)}
-                    placeholder="0.00"
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Description / Ref No.</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newTxDesc}
-                      onChange={e => setNewTxDesc(e.target.value)}
-                      placeholder="e.g. Advance, Cheque, UPI"
-                      className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                    />
-                    <Button onClick={handleAddTransaction} icon={Plus} className="flex-shrink-0">Add</Button>
-                  </div>
+                  <Button onClick={handleAddTransaction} icon={Plus} className="flex-shrink-0">Add</Button>
                 </div>
               </div>
             </div>
+          </div>
 
-            {transactions.length === 0 ? (
-              <div className="text-center py-6 text-slate-400 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-                No transactions recorded.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                  <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-wider">
-                    <tr>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Description</th>
-                      <th className="px-4 py-3 text-right">Amount Paid</th>
-                      <th className="px-4 py-3 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {transactions.map(tx => (
-                      <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 text-slate-600">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{tx.description}</td>
-                        <td className="px-4 py-3 text-right font-mono font-medium text-slate-700">{formatMoney(tx.amount)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => handleRemoveTransaction(tx.id)}
-                            className="text-slate-400 hover:text-red-500 p-1 hover:bg-red-50 rounded transition-colors"
-                            title="Remove Payment"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
-                      <td className="px-4 py-3" colSpan="2">Total Paid:</td>
-                      <td className="px-4 py-3 text-right font-mono text-emerald-600">
-                        {formatMoney(transactions.reduce((acc, tx) => acc + tx.amount, 0))}
+          {transactions.length === 0 ? (
+            <div className="text-center py-6 text-slate-400 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+              No transactions recorded.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50 text-slate-500 font-bold text-xs uppercase tracking-wider">
+                  <tr>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Description</th>
+                    <th className="px-4 py-3 text-right">Amount Paid</th>
+                    <th className="px-4 py-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {transactions.map(tx => (
+                    <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 text-slate-600">{new Date(tx.date).toLocaleDateString('en-IN')}</td>
+                      <td className="px-4 py-3 font-medium text-slate-800">{tx.description}</td>
+                      <td className="px-4 py-3 text-right font-mono font-medium text-slate-700">{formatMoney(tx.amount)}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleRemoveTransaction(tx.id)}
+                          className="text-slate-400 hover:text-red-500 p-1 hover:bg-red-50 rounded transition-colors"
+                          title="Remove Payment"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
-                      <td></td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </Card>
-        )}
+                  ))}
+                  <tr className="bg-slate-50 font-bold border-t border-slate-200 text-slate-800">
+                    <td className="px-4 py-3" colSpan="2">Total Paid:</td>
+                    <td className="px-4 py-3 text-right font-mono text-emerald-600">
+                      {formatMoney(transactions.reduce((acc, tx) => acc + tx.amount, 0))}
+                    </td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
       </div>
 
       <div className="w-full lg:w-80 flex-shrink-0">
@@ -852,28 +898,117 @@ export default function App() {
                 <span>{formatMoney(totals.subtotal)}</span>
               </div>
 
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Hardware Discount</span>
-                <div className="flex items-center w-20">
-                  <input
-                    type="number"
-                    value={hardwareDiscount}
-                    onChange={(e) => setHardwareDiscount(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
-                  />
-                  <span className="ml-1">%</span>
+              <div className="space-y-1 py-1">
+                <div className="flex justify-between items-center text-slate-400">
+                  <span className="text-xs">Hardware Discount</span>
+                  <div className="flex items-center gap-1">
+                    <div className="flex bg-slate-800 rounded p-0.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setHardwareDiscMode('percent')}
+                        className={`px-1.5 py-0.5 rounded font-bold transition-colors ${hardwareDiscMode === 'percent' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        %
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHardwareDiscMode('amount')}
+                        className={`px-1.5 py-0.5 rounded font-bold transition-colors ${hardwareDiscMode === 'amount' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        ₹
+                      </button>
+                    </div>
+                    {hardwareDiscMode === 'percent' ? (
+                      <div className="flex items-center w-20">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={hardwareDiscount}
+                          onChange={(e) => setHardwareDiscount(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white text-xs focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="ml-1 text-xs">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center w-24">
+                        <span className="mr-1 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={Math.round(oneTimeTotals.subtotal * (hardwareDiscount / 100))}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const pct = oneTimeTotals.subtotal > 0 ? (amt / oneTimeTotals.subtotal) * 100 : 0;
+                            setHardwareDiscount(pct);
+                          }}
+                          className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white text-xs focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 text-right">
+                  {hardwareDiscMode === 'percent'
+                    ? `= ${formatMoney(oneTimeTotals.subtotal * (hardwareDiscount / 100))}`
+                    : `= ${hardwareDiscount.toFixed(2)}%`}
                 </div>
               </div>
-              <div className="flex justify-between items-center text-slate-400">
-                <span>Subscription Discount</span>
-                <div className="flex items-center w-20">
-                  <input
-                    type="number"
-                    value={subscriptionDiscount}
-                    onChange={(e) => setSubscriptionDiscount(parseFloat(e.target.value) || 0)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white focus:ring-1 focus:ring-blue-500"
-                  />
-                  <span className="ml-1">%</span>
+
+              <div className="space-y-1 py-1">
+                <div className="flex justify-between items-center text-slate-400">
+                  <span className="text-xs">Subscription Discount</span>
+                  <div className="flex items-center gap-1">
+                    <div className="flex bg-slate-800 rounded p-0.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => setSubDiscMode('percent')}
+                        className={`px-1.5 py-0.5 rounded font-bold transition-colors ${subDiscMode === 'percent' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        %
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSubDiscMode('amount')}
+                        className={`px-1.5 py-0.5 rounded font-bold transition-colors ${subDiscMode === 'amount' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                      >
+                        ₹
+                      </button>
+                    </div>
+                    {subDiscMode === 'percent' ? (
+                      <div className="flex items-center w-20">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={subscriptionDiscount}
+                          onChange={(e) => setSubscriptionDiscount(parseFloat(e.target.value) || 0)}
+                          className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white text-xs focus:ring-1 focus:ring-blue-500"
+                        />
+                        <span className="ml-1 text-xs">%</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center w-24">
+                        <span className="mr-1 text-xs">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={Math.round(subTotals.subtotal * (subscriptionDiscount / 100))}
+                          onChange={(e) => {
+                            const amt = parseFloat(e.target.value) || 0;
+                            const pct = subTotals.subtotal > 0 ? (amt / subTotals.subtotal) * 100 : 0;
+                            setSubscriptionDiscount(pct);
+                          }}
+                          className="w-full bg-slate-800 border border-slate-700 rounded text-right px-2 py-1 text-white text-xs focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="text-[10px] text-slate-400 text-right">
+                  {subDiscMode === 'percent'
+                    ? `= ${formatMoney(subTotals.subtotal * (subscriptionDiscount / 100))}`
+                    : `= ${subscriptionDiscount.toFixed(2)}%`}
                 </div>
               </div>
 
@@ -1194,7 +1329,7 @@ export default function App() {
           </div>
         )}
 
-        {enableSplitPayment && transactions.length > 0 && (
+        {transactions.length > 0 && (
           <div className="mt-8 border-t border-slate-200 pt-6">
             <h4 className="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
               <History className="w-4 h-4 text-blue-600" />
