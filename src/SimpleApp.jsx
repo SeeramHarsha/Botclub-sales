@@ -860,7 +860,7 @@ export default function SimpleApp() {
                                                 {formatMoney(item.price)}
                                             </td>
                                             <td className={`py-2 text-right align-top pt-2 ${item.discount > 0 ? 'text-green-600 font-semibold' : 'text-slate-700'}`}>
-                                                {item.discount > 0 ? `${item.discount}%` : '-'}
+                                                {item.discount > 0 ? formatMoney(item.quantity * item.price * (item.discount / 100)) : '-'}
                                             </td>
                                             <td className="py-2 text-right font-medium text-slate-800 align-top pt-2">
                                                 {formatMoney(item.quantity * item.price * (1 - item.discount / 100))}
@@ -949,7 +949,7 @@ export default function SimpleApp() {
                             {showGstDisclaimer && (
                                 <div className="mt-4 text-left">
                                     <p className="text-red-600 font-bold text-xs">
-                                        * GST @18% will be applicable as per government norms and added in the final invoice
+                                        * GST @18% will be applicable as per government norms and added in the final invoice. Transportation cost extra.
                                     </p>
                                 </div>
                             )}
